@@ -1,4 +1,14 @@
+# Virtual environment
 venv/
+
+# Python cache
 __pycache__/
 *.pyc
+cache/
+
+# Data files (never commit raw data)
+data/
+
+# Models
 models/*.pkl
+models/*.h5

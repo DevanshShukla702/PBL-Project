@@ -1,9 +1,20 @@
+import random
+from datetime import timedelta
 import os
 import osmnx as ox
 import pandas as pd
 import networkx as nx
 import random
 from datetime import datetime, timedelta
+# -----------------------------
+# Realism configuration (v2)
+# -----------------------------
+USE_REALISTIC_REGIMES = True
+
+PEAK_HOURS = [(8, 10), (18, 21)]  # morning & evening
+ACCIDENT_PROBABILITY = 0.015     # ~1.5% chance per segment per hour
+ACCIDENT_SPEED_DROP = (0.4, 0.7) # 40–70% speed reduction
+PROPAGATION_FACTOR = 0.4         # congestion spread to neighbors
 
 
 
@@ -68,6 +79,11 @@ FREE_FLOW_SPEED = {
     "secondary": 45,
     "residential": 30
 }
+def is_peak_hour(hour):
+    for start, end in PEAK_HOURS:
+        if start <= hour < end:
+            return True
+    return False
 
 
 def get_free_flow_speed(road_type):
@@ -106,7 +122,7 @@ def generate_daily_traffic(segments, date="2024-01-01"):
 
     return pd.DataFrame(records)
 
-def save_dataset(df, path="data/processed/synthetic_traffic_timeseries.csv"):
+def save_dataset(df, path="data/raw/synthetic_traffic_v2.csv"):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     df.to_csv(path, index=False)
     print(f"Synthetic traffic dataset saved to {path}")

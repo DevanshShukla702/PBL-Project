@@ -3,7 +3,7 @@ import numpy as np
 from xgboost import XGBRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 from pathlib import Path
-
+import joblib
 
 # ============================================================
 # CONFIG
@@ -11,8 +11,12 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATA_PATH = PROJECT_ROOT / "data" / "processed" / "training_dataset.csv"
+MODEL_DIR = PROJECT_ROOT / "models"
+MODEL_DIR.mkdir(exist_ok=True)
 
-BASE_FEATURES = [
+# 🔒 LOCKED FEATURE CONTRACT (TRAINING == INFERENCE)
+FEATURE_COLS = [
+    "speed_lag_1",
     "hour",
     "hour_sin",
     "hour_cos",
@@ -25,13 +29,6 @@ TARGETS = {
     "4_hour": "y_4h"
 }
 
-HORIZON_LAGS = {
-    "1_hour": ["speed_lag_1"],
-    "2_hour": ["speed_lag_1", "speed_lag_2"],
-    "4_hour": ["speed_lag_1", "speed_lag_2", "speed_lag_4"]
-}
-
-
 # ============================================================
 # TRAINING FUNCTION
 # ============================================================
@@ -39,13 +36,13 @@ HORIZON_LAGS = {
 def train_xgb_for_horizon(df, horizon_name, target_col):
     print(f"\nTraining XGBoost for horizon: {horizon_name}")
 
-    feature_cols = HORIZON_LAGS[horizon_name] + BASE_FEATURES
-    data = df.dropna(subset=feature_cols + [target_col])
+    # Drop rows with missing required data
+    data = df.dropna(subset=FEATURE_COLS + [target_col])
 
-    X = data[feature_cols]
+    X = data[FEATURE_COLS]
     y = data[target_col]
 
-    # -------- Time-aware split (NO leakage) --------
+    # Time-aware split (NO SHUFFLE)
     split_idx = int(len(data) * 0.8)
 
     X_train = X.iloc[:split_idx]
@@ -74,7 +71,7 @@ def train_xgb_for_horizon(df, horizon_name, target_col):
     print(f"MAE  : {mae:.2f} km/h")
     print(f"RMSE : {rmse:.2f} km/h")
 
-    return mae, rmse
+    return model, mae, rmse
 
 
 # ============================================================
@@ -88,12 +85,18 @@ def main():
     results = {}
 
     for horizon, target_col in TARGETS.items():
-        mae, rmse = train_xgb_for_horizon(df, horizon, target_col)
+        model, mae, rmse = train_xgb_for_horizon(df, horizon, target_col)
+
+        model_path = MODEL_DIR / f"xgb_{horizon}.pkl"
+        joblib.dump(model, model_path)
+
+        print(f"Model saved to: {model_path}")
+
         results[horizon] = {"MAE": mae, "RMSE": rmse}
 
     print("\n==== XGBOOST MULTI-HORIZON RESULTS (HOURLY) ====")
-    for h, metrics in results.items():
-        print(f"{h}: MAE={metrics['MAE']:.2f}, RMSE={metrics['RMSE']:.2f}")
+    for h, m in results.items():
+        print(f"{h}: MAE={m['MAE']:.2f}, RMSE={m['RMSE']:.2f}")
 
 
 if __name__ == "__main__":

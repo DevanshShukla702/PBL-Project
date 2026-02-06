@@ -1,127 +1,98 @@
-import os          # <-- ADD THIS
+import os
+import joblib
 import osmnx as ox
 import networkx as nx
-import pandas as pd
 import numpy as np
-import joblib
-from datetime import datetime
 
-
-
-# --------------------------------------------------
-# CONFIG
-# --------------------------------------------------
-
+# -----------------------------
+# Paths
+# -----------------------------
 GRAPH_PATH = "data/raw/osm/bengaluru_road_network.graphml"
 MODEL_DIR = "models"
 
-HORIZON_MODELS = {
+HORIZONS = {
     "1_hour": "xgb_1_hour.pkl",
     "2_hour": "xgb_2_hour.pkl",
     "4_hour": "xgb_4_hour.pkl"
 }
 
-FEATURE_COLS = [
-    "speed_lag_1",
-    "hour",
-    "hour_sin",
-    "hour_cos",
-    "is_peak"
-]
+# -----------------------------
+# Load graph (cached)
+# -----------------------------
+_graph = None
 
-
-# --------------------------------------------------
-# LOADERS
-# --------------------------------------------------
 
 def load_graph():
-    return ox.load_graphml(GRAPH_PATH)
+    global _graph
+    if _graph is None:
+        if not os.path.exists(GRAPH_PATH):
+            raise FileNotFoundError(f"Graph not found at {GRAPH_PATH}")
+        _graph = ox.load_graphml(GRAPH_PATH)
+    return _graph
 
 
+# -----------------------------
+# Load ML models
+# -----------------------------
 def load_models():
     models = {}
-    for horizon, fname in HORIZON_MODELS.items():
-        models[horizon] = joblib.load(os.path.join(MODEL_DIR, fname))
+    for horizon, fname in HORIZONS.items():
+        path = os.path.join(MODEL_DIR, fname)
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"Model missing: {path}")
+        models[horizon] = joblib.load(path)
     return models
 
 
-# --------------------------------------------------
-# ROUTE EXTRACTION
-# --------------------------------------------------
+# -----------------------------
+# Shortest path
+# -----------------------------
+def get_shortest_path(G, source, destination):
+    orig = ox.nearest_nodes(G, source[1], source[0])
+    dest = ox.nearest_nodes(G, destination[1], destination[0])
 
-def get_route_segments(G, src_lat, src_lon, dst_lat, dst_lon):
-    src_node = ox.nearest_nodes(G, src_lon, src_lat)
-    dst_node = ox.nearest_nodes(G, dst_lon, dst_lat)
-
-    path = nx.shortest_path(G, src_node, dst_node, weight="length")
-
-    segments = []
-    for u, v in zip(path[:-1], path[1:]):
-        edge_data = G.get_edge_data(u, v)[0]
-
-        segment_id = f"{u}_{v}_0"
-        length = edge_data.get("length", 100)
-        road_type = edge_data.get("highway", "residential")
-
-        segments.append({
-            "segment_id": segment_id,
-            "length_m": length,
-            "road_type": road_type
-        })
-
-    return segments
+    return nx.shortest_path(G, orig, dest, weight="length")
 
 
-# --------------------------------------------------
-# FEATURE CONSTRUCTION (INFERENCE)
-# --------------------------------------------------
-
-def build_features(speed_lag, timestamp):
-    hour = timestamp.hour
-    return pd.DataFrame([{
-        "speed_lag_1": speed_lag,
-        "hour": hour,
-        "hour_sin": np.sin(2 * np.pi * hour / 24),
-        "hour_cos": np.cos(2 * np.pi * hour / 24),
-        "is_peak": 1 if (7 <= hour <= 10 or 17 <= hour <= 21) else 0
-    }])
-
-
-# --------------------------------------------------
-# ETA COMPUTATION
-# --------------------------------------------------
-
-def compute_route_eta(route_segments, models, base_speed=35.0):
-    etas = {}
-
-    now = datetime.now()
-
-    for horizon, model in models.items():
-        total_time_sec = 0
-
-        for seg in route_segments:
-            features = build_features(base_speed, now)
-            pred_speed = model.predict(features)[0]
-
-            pred_speed = max(pred_speed, 5.0)  # safety
-            time_sec = seg["length_m"] / (pred_speed * 1000 / 3600)
-
-            total_time_sec += time_sec
-
-        etas[horizon] = total_time_sec / 60  # minutes
-
-    return etas
-
-
-# --------------------------------------------------
-# PUBLIC API
-# --------------------------------------------------
-
-def predict_route_eta(src_lat, src_lon, dst_lat, dst_lon):
+# -----------------------------
+# Route ETA computation
+# -----------------------------
+def compute_route_eta(source, destination):
+    """
+    source, destination: (lat, lon)
+    returns: dict of horizon -> ETA in minutes (python float)
+    """
     G = load_graph()
     models = load_models()
 
-    route = get_route_segments(G, src_lat, src_lon, dst_lat, dst_lon)
-    etas = compute_route_eta(route, models)
+    try:
+        route = get_shortest_path(G, source, destination)
+    except nx.NetworkXNoPath:
+        return {"error": "No route found"}
+
+    # Compute total route length safely
+    total_length_m = 0.0
+    for u, v in zip(route[:-1], route[1:]):
+        edge_data = G.get_edge_data(u, v)
+        if edge_data:
+            first_edge = list(edge_data.values())[0]
+            total_length_m += first_edge.get("length", 100)
+
+    total_km = total_length_m / 1000.0
+
+    # Base features (simple but stable)
+    hour = 12
+    hour_sin = np.sin(2 * np.pi * hour / 24)
+    hour_cos = np.cos(2 * np.pi * hour / 24)
+    is_peak = 0
+    speed_lag_1 = 30.0  # reasonable default
+
+    features = np.array([[speed_lag_1, hour, hour_sin, hour_cos, is_peak]])
+
+    etas = {}
+    for horizon, model in models.items():
+        pred_speed = float(model.predict(features)[0])  # convert NumPy → float
+        eta_minutes = (total_km / max(pred_speed, 5)) * 60
+        etas[horizon] = float(round(eta_minutes, 2))
 
     return etas

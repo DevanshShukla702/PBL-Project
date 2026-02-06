@@ -1,20 +1,13 @@
-from route_eta import predict_route_eta
-
-# Example coordinates in Bengaluru
-# Indiranagar → MG Road
-SRC_LAT, SRC_LON = 12.9716, 77.6412
-DST_LAT, DST_LON = 12.9758, 77.6033
+from route_eta import compute_route_eta
 
 if __name__ == "__main__":
     print("Testing route-level ETA prediction...\n")
 
-    etas = predict_route_eta(
-        src_lat=SRC_LAT,
-        src_lon=SRC_LON,
-        dst_lat=DST_LAT,
-        dst_lon=DST_LON
-    )
+    source = (12.9716, 77.6412)
+    destination = (12.9758, 77.6033)
+
+    etas = compute_route_eta(source, destination)
 
     print("Predicted ETAs (in minutes):")
-    for horizon, eta in etas.items():
-        print(f"{horizon}: {eta:.2f} min")
+    for h, v in etas.items():
+        print(f"{h}: {v} min")

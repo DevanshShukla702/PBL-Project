@@ -99,17 +99,27 @@ def generate_daily_traffic(segments, date="2024-01-01"):
         free_speed = get_free_flow_speed(seg["road_type"])
         capacity = get_capacity_factor(seg["road_type"])
 
-        # Base congestion trend for the whole day (smooth)
-        base_congestion = [
-            min(
-                max(time_load_factor(t.hour) * (1 - capacity) + random.uniform(-0.03, 0.03), 0),
+        # Incident configuration per segment
+        has_incident = random.random() < 0.12  # ~12% segments/day
+        incident_start = random.randint(6, 20) if has_incident else None
+        incident_duration = random.randint(1, 3) if has_incident else 0
+        incident_severity = round(random.uniform(0.3, 0.8), 2) if has_incident else 0.0
+
+        for t in hours:
+            base_congestion = min(
+                max(time_load_factor(t.hour) * (1 - capacity) + random.uniform(-0.05, 0.05), 0),
                 0.9
             )
-            for t in hours
-        ]
 
-        for i, t in enumerate(hours):
-            congestion = base_congestion[i]
+            # Incident logic
+            incident_flag = 0
+            congestion = base_congestion
+
+            if has_incident:
+                if incident_start <= t.hour < incident_start + incident_duration:
+                    incident_flag = 1
+                    congestion = min(congestion + incident_severity, 0.95)
+
             speed = compute_speed(free_speed, congestion)
 
             records.append({
@@ -117,10 +127,13 @@ def generate_daily_traffic(segments, date="2024-01-01"):
                 "timestamp": t,
                 "road_type": seg["road_type"],
                 "speed_kmph": round(speed, 2),
-                "congestion": round(congestion, 2)
+                "congestion": round(congestion, 2),
+                "incident_flag": incident_flag,
+                "incident_severity": incident_severity if incident_flag else 0.0
             })
 
     return pd.DataFrame(records)
+
 
 def save_dataset(df, path="data/raw/synthetic_traffic_v2.csv"):
     os.makedirs(os.path.dirname(path), exist_ok=True)

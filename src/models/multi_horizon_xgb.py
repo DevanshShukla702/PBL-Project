@@ -20,7 +20,9 @@ FEATURE_COLS = [
     "hour",
     "hour_sin",
     "hour_cos",
-    "is_peak"
+    "is_peak",
+    "incident_flag",
+    "incident_severity"
 ]
 
 TARGETS = {

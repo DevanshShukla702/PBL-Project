@@ -1,13 +1,11 @@
 from route_eta import compute_route_eta
 
-if __name__ == "__main__":
-    print("Testing route-level ETA prediction...\n")
+source = {"lat": 13.0827, "lon": 77.5562}       # Yelahanka
+destination = {"lat": 12.8452, "lon": 77.6600}  # Electronic City
 
-    source = (12.9716, 77.6412)
-    destination = (12.9758, 77.6033)
+print("\nTesting route-level ETA prediction...\n")
 
-    etas = compute_route_eta(source, destination)
+etas = compute_route_eta(source, destination)
 
-    print("Predicted ETAs (in minutes):")
-    for h, v in etas.items():
-        print(f"{h}: {v} min")
+for h, eta in etas.items():
+    print(f"{h} ETA: {eta} min")

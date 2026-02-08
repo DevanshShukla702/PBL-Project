@@ -47,8 +47,9 @@ def add_lag_features(df):
     g = df.groupby("segment_id")
 
     df["speed_lag_1"] = g["speed_kmph"].shift(1)
-    df["speed_lag_2"] = g["speed_kmph"].shift(2)
-    df["speed_lag_4"] = g["speed_kmph"].shift(4)
+    df["incident_flag"] = df["incident_flag"].astype(int)
+    df["incident_severity"] = df["incident_severity"].astype(float)
+
 
     return df
 
@@ -79,13 +80,14 @@ def build_training_dataset():
     df = add_prediction_targets(df)
 
     required_cols = [
-        "speed_lag_1",
-        "speed_lag_2",
-        "speed_lag_4",
-        "y_1h",
-        "y_2h",
-        "y_4h"
-    ]
+    "speed_lag_1",
+    "incident_flag",
+    "incident_severity",
+    "y_1h",
+    "y_2h",
+    "y_4h"
+]
+
 
     df = df.dropna(subset=required_cols)
 

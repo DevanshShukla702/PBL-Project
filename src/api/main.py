@@ -2,20 +2,24 @@
 
 from fastapi import FastAPI
 from pydantic import BaseModel
-
 from src.routing.route_eta import compute_route_eta
 
 app = FastAPI(title="AI Traffic Prediction System")
 
 
-class Point(BaseModel):
+class Location(BaseModel):
     lat: float
     lon: float
 
 
 class RouteRequest(BaseModel):
-    source: Point
-    destination: Point
+    source: Location
+    destination: Location
+
+
+@app.get("/")
+def health():
+    return {"status": "ok"}
 
 
 @app.post("/predict-route-eta")

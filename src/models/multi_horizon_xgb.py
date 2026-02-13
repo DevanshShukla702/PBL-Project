@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+import joblib
+import os
 from xgboost import XGBRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 from pathlib import Path
@@ -103,3 +105,18 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+def load_models():
+    """
+    Load trained multi-horizon XGBoost models from disk.
+    """
+    base_path = os.path.join("models")
+
+    models = {
+        "1_hour": joblib.load(os.path.join(base_path, "xgb_1_hour.pkl")),
+        "2_hour": joblib.load(os.path.join(base_path, "xgb_2_hour.pkl")),
+        "4_hour": joblib.load(os.path.join(base_path, "xgb_4_hour.pkl")),
+    }
+
+    return models

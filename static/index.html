@@ -3,765 +3,280 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CGEE™ — Contextual Graph ETA Engine</title>
-    <meta name="description" content="Patented context-aware multi-horizon graph-based ETA prediction engine for Bengaluru traffic. Powered by XGBoost + OSMnx.">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <title>CGEE™ | Predict Your Journey Before You Drive</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
         :root {
-            --bg-primary: #0f172a;
-            --bg-card: #1e293b;
-            --bg-card-hover: #263548;
-            --bg-input: #0f172a;
-            --accent: #38bdf8;
-            --accent-glow: rgba(56, 189, 248, 0.15);
-            --accent-dim: #0ea5e9;
-            --text-primary: #f1f5f9;
-            --text-secondary: #94a3b8;
-            --text-muted: #64748b;
-            --border: #334155;
-            --green: #22c55e;
-            --green-bg: rgba(34, 197, 94, 0.12);
-            --amber: #f59e0b;
-            --amber-bg: rgba(245, 158, 11, 0.12);
-            --red: #ef4444;
-            --red-bg: rgba(239, 68, 68, 0.12);
-            --radius: 12px;
-            --radius-sm: 8px;
-            --shadow: 0 4px 24px rgba(0,0,0,0.3);
+            --primary: #2563EB;
+            --primary-hover: #1D4ED8;
+            --bg: #ffffff;
+            --text-main: #111827;
+            --text-muted: #6B7280;
+            --border: #E5E7EB;
+            --bg-light: #F9FAFB;
         }
-
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+            color: var(--text-main);
+            background-color: var(--bg);
             line-height: 1.6;
-        }
-
-        /* ─── Header ─── */
-        .header {
-            padding: 20px 32px;
-            border-bottom: 1px solid var(--border);
             display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        a { text-decoration: none; color: inherit; }
+        
+        /* Navigation */
+        header {
+            display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 16px;
-            background: linear-gradient(180deg, rgba(30,41,59,0.8) 0%, transparent 100%);
-            backdrop-filter: blur(12px);
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            background-color: var(--bg);
             position: sticky;
             top: 0;
             z-index: 100;
         }
-        .header-logo {
-            width: 40px; height: 40px;
-            background: linear-gradient(135deg, var(--accent), #818cf8);
-            border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-            font-weight: 800; font-size: 16px; color: #0f172a;
-            flex-shrink: 0;
-        }
-        .header-title { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
-        .header-subtitle { font-size: 12px; color: var(--text-muted); font-weight: 400; }
-        .header-badge {
-            margin-left: auto;
-            padding: 4px 12px;
-            border-radius: 20px;
-            background: var(--accent-glow);
-            color: var(--accent);
-            font-size: 11px;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-            border: 1px solid rgba(56,189,248,0.2);
-        }
-
-        /* ─── Layout ─── */
-        .main-container {
-            display: grid;
-            grid-template-columns: 380px 1fr;
-            gap: 0;
-            min-height: calc(100vh - 73px);
-        }
-        @media (max-width: 768px) {
-            .main-container {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* ─── Left Panel ─── */
-        .left-panel {
-            padding: 28px 24px;
-            border-right: 1px solid var(--border);
-            background: rgba(30,41,59,0.4);
-            overflow-y: auto;
-        }
-        .section-title {
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1.2px;
-            color: var(--text-muted);
-            margin-bottom: 14px;
-        }
-        .input-group { margin-bottom: 20px; }
-        .input-label {
-            font-size: 13px;
+        .logo { font-weight: 700; font-size: 20px; color: var(--primary); }
+        .nav-links { display: flex; gap: 24px; }
+        .nav-links a {
             font-weight: 500;
-            color: var(--text-secondary);
-            margin-bottom: 6px;
-            display: block;
+            color: var(--text-muted);
+            transition: color 0.2s;
+            padding-bottom: 2px;
         }
-        .input-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-        input[type="number"], select {
-            width: 100%;
-            padding: 10px 14px;
-            background: var(--bg-input);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-sm);
-            color: var(--text-primary);
-            font-family: 'Inter', system-ui, sans-serif;
-            font-size: 14px;
-            transition: border-color 0.2s, box-shadow 0.2s;
-            outline: none;
-        }
-        input[type="number"]:focus, select:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px var(--accent-glow);
-        }
-        input[type="number"]::placeholder { color: var(--text-muted); }
-        select {
-            cursor: pointer;
-            appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 12px center;
-            padding-right: 36px;
+        .nav-links a:hover { color: var(--text-main); }
+        .nav-links a.active {
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
         }
 
-        .divider {
-            height: 1px;
-            background: var(--border);
-            margin: 24px 0;
-        }
-
-        .btn-predict {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, var(--accent), #818cf8);
-            border: none;
-            border-radius: var(--radius);
-            color: #0f172a;
-            font-family: 'Inter', system-ui, sans-serif;
-            font-size: 15px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: transform 0.15s, box-shadow 0.2s, opacity 0.2s;
-            letter-spacing: 0.3px;
-        }
-        .btn-predict:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(56,189,248,0.35);
-        }
-        .btn-predict:active { transform: translateY(0); }
-        .btn-predict:disabled {
-            opacity: 0.6; cursor: not-allowed; transform: none;
-            box-shadow: none;
-        }
-
-        .loading-indicator {
-            display: none;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 16px;
-            color: var(--text-secondary);
-            font-size: 13px;
-        }
-        .loading-indicator.active { display: flex; }
-        .spinner {
-            width: 18px; height: 18px;
-            border: 2px solid var(--border);
-            border-top-color: var(--accent);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* ─── Right Panel ─── */
-        .right-panel {
-            padding: 28px 32px;
-            overflow-y: auto;
-        }
-        @media (max-width: 768px) {
-            .right-panel { padding: 20px 16px; }
-        }
-
-        .results-container {
-            display: none;
-            animation: fadeIn 0.5s ease;
-        }
-        .results-container.visible { display: block; }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(12px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .empty-state {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            min-height: 400px;
+        /* Hero */
+        .hero {
+            padding: 80px 24px;
             text-align: center;
-            color: var(--text-muted);
+            max-width: 800px;
+            margin: 0 auto;
         }
-        .empty-state-icon {
-            width: 80px; height: 80px;
-            border: 2px dashed var(--border);
-            border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 32px;
-            margin-bottom: 20px;
-            opacity: 0.5;
-        }
-        .empty-state h2 {
-            font-size: 18px; font-weight: 600;
-            color: var(--text-secondary);
-            margin-bottom: 8px;
-        }
-        .empty-state p { font-size: 14px; max-width: 320px; }
-
-        /* ─── Route Tabs ─── */
-        .route-tabs {
-            display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap;
-        }
-        .route-tab {
-            padding: 8px 20px;
+        .hero h1 { font-size: 48px; font-weight: 700; margin-bottom: 24px; line-height: 1.2; }
+        .hero p { font-size: 18px; color: var(--text-muted); margin-bottom: 40px; }
+        .hero-ctas { display: flex; justify-content: center; gap: 16px; margin-bottom: 64px; }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
             border-radius: 8px;
-            border: 1px solid var(--border);
-            background: transparent;
-            color: var(--text-secondary);
-            font-family: 'Inter', system-ui, sans-serif;
-            font-size: 13px;
-            font-weight: 500;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
         }
-        .route-tab:hover { background: var(--bg-card); }
-        .route-tab.active {
-            background: var(--accent-glow);
-            border-color: var(--accent);
-            color: var(--accent);
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+            border: none;
         }
-        .route-tab .tab-dot {
-            display: inline-block;
-            width: 8px; height: 8px;
-            border-radius: 50%;
-            margin-right: 6px;
-            vertical-align: middle;
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-outline {
+            background-color: transparent;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+        .btn-outline:hover { background-color: #EFF6FF; }
+        
+        /* Hero Visual */
+        .hero-visual { width: 100%; max-width: 600px; margin: 0 auto; }
+        .node { animation: pulse 2s infinite; transform-origin: center; }
+        @keyframes pulse { 0% { r: 6; opacity: 1; } 50% { r: 12; opacity: 0.5; } 100% { r: 6; opacity: 1; } }
+
+        /* Stats Bar */
+        .stats-bar {
+            background-color: var(--bg-light);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            padding: 32px 24px;
+            display: flex;
+            justify-content: center;
+            gap: 48px;
+            flex-wrap: wrap;
+        }
+        .stat-item {
+            text-align: center;
+            font-weight: 600;
+            color: var(--text-main);
+            font-size: 18px;
         }
 
-        /* ─── Horizon Cards ─── */
-        .horizon-grid {
+        /* Features */
+        .features { padding: 80px 24px; max-width: 1000px; margin: 0 auto; }
+        .feature-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 16px;
-            margin-bottom: 24px;
+            gap: 32px;
         }
-        @media (max-width: 900px) {
-            .horizon-grid { grid-template-columns: 1fr; }
-        }
-
-        .horizon-card {
-            background: var(--bg-card);
+        .feature-card {
+            padding: 24px;
             border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 20px;
-            transition: transform 0.2s, border-color 0.2s;
+            border-radius: 12px;
+            background: var(--bg);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
-        .horizon-card:hover {
-            transform: translateY(-2px);
-            border-color: var(--accent);
-        }
-        .horizon-label {
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            color: var(--text-muted);
-            margin-bottom: 8px;
-        }
-        .horizon-estimate {
-            font-size: 36px;
-            font-weight: 800;
-            letter-spacing: -1.5px;
-            color: var(--text-primary);
-            margin-bottom: 2px;
-        }
-        .horizon-unit {
-            font-size: 16px;
-            font-weight: 400;
-            color: var(--text-secondary);
-            margin-left: 4px;
-        }
+        .feature-icon { width: 40px; height: 40px; color: var(--primary); margin-bottom: 16px; }
+        .feature-title { font-size: 20px; font-weight: 600; margin-bottom: 12px; }
+        .feature-body { color: var(--text-muted); font-size: 15px; }
 
-        /* Range bar */
-        .range-bar-container {
-            margin-top: 16px;
-        }
-        .range-bar-labels {
+        /* Timeline */
+        .timeline { padding: 40px 24px 80px; max-width: 1000px; margin: 0 auto; text-align: center; }
+        .timeline h2 { margin-bottom: 40px; font-size: 32px; }
+        .steps {
             display: flex;
             justify-content: space-between;
-            font-size: 11px;
-            color: var(--text-muted);
-            margin-bottom: 6px;
-        }
-        .range-bar-track {
+            align-items: flex-start;
             position: relative;
-            height: 6px;
-            background: var(--border);
-            border-radius: 3px;
-            overflow: visible;
         }
-        .range-bar-fill {
-            position: absolute;
-            height: 100%;
-            background: linear-gradient(90deg, var(--accent-dim), var(--accent));
-            border-radius: 3px;
-            transition: width 0.4s ease, left 0.4s ease;
+        .steps::before {
+            content: ''; position: absolute; top: 16px; left: 0; right: 0; height: 2px;
+            background-color: var(--border); z-index: 1;
         }
-        .range-bar-marker {
-            position: absolute;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            width: 14px; height: 14px;
-            background: var(--accent);
-            border: 2px solid var(--bg-card);
-            border-radius: 50%;
-            box-shadow: 0 0 8px var(--accent-glow);
-            transition: left 0.4s ease;
+        .step { position: relative; z-index: 2; flex: 1; padding: 0 16px; }
+        .step-num {
+            width: 34px; height: 34px; background: var(--bg); border: 2px solid var(--primary);
+            color: var(--primary); border-radius: 50%; display: flex; align-items: center;
+            justify-content: center; font-weight: 700; margin: 0 auto 16px;
         }
+        .step-title { font-weight: 600; font-size: 16px; margin-bottom: 8px; }
+        .step-desc { font-size: 14px; color: var(--text-muted); }
 
-        /* Confidence badge */
-        .confidence-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            margin-top: 14px;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 600;
-            letter-spacing: 0.3px;
-        }
-        .confidence-badge .dot {
-            width: 6px; height: 6px;
-            border-radius: 50%;
-        }
-        .confidence-high {
-            background: var(--green-bg);
-            color: var(--green);
-        }
-        .confidence-high .dot { background: var(--green); }
-        .confidence-moderate {
-            background: var(--amber-bg);
-            color: var(--amber);
-        }
-        .confidence-moderate .dot { background: var(--amber); }
-        .confidence-low {
-            background: var(--red-bg);
-            color: var(--red);
-        }
-        .confidence-low .dot { background: var(--red); }
-
-        /* ─── Meta Strip ─── */
-        .meta-strip {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 18px 22px;
+        /* Footer */
+        footer {
+            margin-top: auto;
+            border-top: 1px solid var(--border);
+            padding: 32px 24px;
             display: flex;
-            flex-wrap: wrap;
-            gap: 24px;
+            justify-content: space-between;
             align-items: center;
+            max-width: 1000px;
+            margin: auto auto 0;
+            width: 100%;
         }
-        .meta-item {
-            display: flex;
-            flex-direction: column;
-        }
-        .meta-label {
-            font-size: 11px;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.6px;
-            color: var(--text-muted);
-            margin-bottom: 2px;
-        }
-        .meta-value {
-            font-size: 15px;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-        .incident-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 14px;
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: 600;
-        }
-        .incident-active {
-            background: var(--red-bg);
-            color: var(--red);
-            border: 1px solid rgba(239,68,68,0.25);
-        }
-        .incident-clear {
-            background: var(--green-bg);
-            color: var(--green);
-            border: 1px solid rgba(34,197,94,0.25);
-        }
+        .footer-text { color: var(--text-muted); font-size: 14px; }
+        .footer-links { display: flex; gap: 16px; font-size: 14px; color: var(--text-muted); }
+        .footer-links a:hover { color: var(--primary); }
 
-        /* Error card */
-        .error-card {
-            display: none;
-            background: var(--red-bg);
-            border: 1px solid rgba(239,68,68,0.25);
-            border-radius: var(--radius);
-            padding: 20px 24px;
-            color: var(--red);
-            font-size: 14px;
-            line-height: 1.6;
-            animation: fadeIn 0.4s ease;
+        @media (max-width: 768px) {
+            .feature-grid { grid-template-columns: 1fr; }
+            .steps { flex-direction: column; gap: 32px; }
+            .steps::before { display: none; }
+            .hero h1 { font-size: 36px; }
+            .stats-bar { gap: 24px; flex-direction: column; }
         }
-        .error-card.visible { display: block; }
-        .error-card strong { display: block; margin-bottom: 4px; font-size: 15px; }
     </style>
 </head>
 <body>
 
-<!-- Header -->
-<header class="header">
-    <div class="header-logo">CG</div>
-    <div>
-        <div class="header-title">CGEE™</div>
-        <div class="header-subtitle">Contextual Graph ETA Engine</div>
+    <header>
+        <a href="/static/index.html" class="logo">CGEE™</a>
+        <nav class="nav-links">
+            <a href="/static/app.html">Predict</a>
+            <a href="/static/about.html">How It Works</a>
+            <a href="/static/docs.html">API Docs</a>
+        </nav>
+    </header>
+
+    <section class="hero">
+        <h1>Predict Your Journey Before You Drive</h1>
+        <p>CGEE™ combines real-time graph routing with machine learning to give you accurate travel time estimates across multiple future time horizons — 1 hour, 2 hours, and 4 hours ahead.</p>
+        <div class="hero-ctas">
+            <a href="/static/app.html" class="btn btn-primary">Try It Now</a>
+            <a href="/static/docs.html" class="btn btn-outline">View API Docs</a>
+        </div>
+        
+        <div class="hero-visual">
+            <svg viewBox="0 0 400 200" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                <!-- Edges -->
+                <line x1="50" y1="100" x2="150" y2="50" stroke="#E5E7EB" stroke-width="4" />
+                <line x1="150" y1="50" x2="250" y2="100" stroke="#E5E7EB" stroke-width="4" />
+                <line x1="250" y1="100" x2="350" y2="50" stroke="#2563EB" stroke-width="4" stroke-dasharray="4" />
+                <line x1="50" y1="100" x2="150" y2="150" stroke="#E5E7EB" stroke-width="4" />
+                <line x1="150" y1="150" x2="250" y2="100" stroke="#E5E7EB" stroke-width="4" />
+                <line x1="150" y1="50" x2="150" y2="150" stroke="#E5E7EB" stroke-width="4" />
+                
+                <!-- Nodes -->
+                <circle cx="50" cy="100" r="6" fill="#111827" />
+                <circle cx="150" cy="50" r="6" fill="#111827" />
+                <circle cx="150" cy="150" r="6" fill="#111827" />
+                <circle cx="250" cy="100" r="6" fill="#111827" class="node" style="animation-delay: 0s" />
+                <circle cx="350" cy="50" r="6" fill="#2563EB" class="node" style="animation-delay: 1s" />
+            </svg>
+        </div>
+    </section>
+
+    <div class="stats-bar">
+        <div class="stat-item">3 Time Horizons</div>
+        <div class="stat-item">Segment-Level Precision</div>
+        <div class="stat-item">Bengaluru Road Network</div>
     </div>
-    <span class="header-badge">PATENTED</span>
-</header>
 
-<!-- Main Layout -->
-<div class="main-container">
-
-    <!-- ─── Left Panel: Route Input ─── -->
-    <aside class="left-panel">
-        <div class="section-title">Source</div>
-        <div class="input-group">
-            <label class="input-label" for="source-landmark">Quick Select</label>
-            <select id="source-landmark" onchange="fillFromLandmark('source')">
-                <option value="">Custom coordinates…</option>
-                <option value="13.1007,77.5963">Yelahanka</option>
-                <option value="13.0358,77.5970">Hebbal</option>
-                <option value="12.9757,77.6011">MG Road</option>
-                <option value="12.9279,77.6271">Koramangala</option>
-                <option value="12.8399,77.6770">Electronic City</option>
-                <option value="12.9698,77.7499">Whitefield</option>
-                <option value="12.9784,77.6408">Indiranagar</option>
-                <option value="12.9308,77.5838">Jayanagar</option>
-            </select>
-        </div>
-        <div class="input-group">
-            <div class="input-row">
-                <div>
-                    <label class="input-label" for="source-lat">Latitude</label>
-                    <input type="number" id="source-lat" placeholder="12.9757" step="0.0001" min="12.70" max="13.20">
-                </div>
-                <div>
-                    <label class="input-label" for="source-lon">Longitude</label>
-                    <input type="number" id="source-lon" placeholder="77.6011" step="0.0001" min="77.30" max="77.80">
-                </div>
+    <section class="features">
+        <div class="feature-grid">
+            <div class="feature-card">
+                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                </svg>
+                <div class="feature-title">Segment-Level Routing</div>
+                <div class="feature-body">Routes are computed on Bengaluru's real road network using OpenStreetMap data. Each road segment is evaluated individually for maximum accuracy.</div>
+            </div>
+            <div class="feature-card">
+                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                <div class="feature-title">1h · 2h · 4h Forecasts</div>
+                <div class="feature-body">Three independent XGBoost models predict traffic speed for each future window, so you can plan not just for now but for when you actually need to leave.</div>
+            </div>
+            <div class="feature-card">
+                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                <div class="feature-title">Incident-Aware ETA</div>
+                <div class="feature-body">Real-world incident probability varies by road type and time of day. When incidents are detected, the ETA adjusts using the contextual modulation mechanism.</div>
             </div>
         </div>
+    </section>
 
-        <div class="divider"></div>
-
-        <div class="section-title">Destination</div>
-        <div class="input-group">
-            <label class="input-label" for="dest-landmark">Quick Select</label>
-            <select id="dest-landmark" onchange="fillFromLandmark('dest')">
-                <option value="">Custom coordinates…</option>
-                <option value="13.1007,77.5963">Yelahanka</option>
-                <option value="13.0358,77.5970">Hebbal</option>
-                <option value="12.9757,77.6011">MG Road</option>
-                <option value="12.9279,77.6271">Koramangala</option>
-                <option value="12.8399,77.6770">Electronic City</option>
-                <option value="12.9698,77.7499">Whitefield</option>
-                <option value="12.9784,77.6408">Indiranagar</option>
-                <option value="12.9308,77.5838">Jayanagar</option>
-            </select>
-        </div>
-        <div class="input-group">
-            <div class="input-row">
-                <div>
-                    <label class="input-label" for="dest-lat">Latitude</label>
-                    <input type="number" id="dest-lat" placeholder="12.9279" step="0.0001" min="12.70" max="13.20">
-                </div>
-                <div>
-                    <label class="input-label" for="dest-lon">Longitude</label>
-                    <input type="number" id="dest-lon" placeholder="77.6271" step="0.0001" min="77.30" max="77.80">
-                </div>
+    <section class="timeline">
+        <h2>How It Works</h2>
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-title">Enter coordinates</div>
+                <div class="step-desc">User inputs source & destination</div>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-title">Graph routes</div>
+                <div class="step-desc">Shortest path computed via OSMnx</div>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-title">ML predicts speed</div>
+                <div class="step-desc">XGBoost models per segment per horizon</div>
+            </div>
+            <div class="step">
+                <div class="step-num">4</div>
+                <div class="step-title">ETA returned</div>
+                <div class="step-desc">Aggregated with confidence bands</div>
             </div>
         </div>
+    </section>
 
-        <div class="divider"></div>
-
-        <button class="btn-predict" id="btn-predict" onclick="predictETA()">
-            Predict ETA
-        </button>
-
-        <div class="loading-indicator" id="loading">
-            <div class="spinner"></div>
-            <span>Routing &amp; predicting…</span>
+    <footer>
+        <div class="footer-text">&copy; 2026 Contextual Graph ETA Engine (CGEE™)</div>
+        <div class="footer-links">
+            <a href="/static/about.html">About</a>
+            <a href="/static/docs.html">API Docs</a>
+            <a href="#">GitHub</a>
         </div>
-    </aside>
-
-    <!-- ─── Right Panel: Results ─── -->
-    <main class="right-panel">
-
-        <!-- Empty State -->
-        <div class="empty-state" id="empty-state">
-            <div class="empty-state-icon">🛣️</div>
-            <h2>Select a Route</h2>
-            <p>Choose source and destination landmarks or enter coordinates, then tap Predict ETA.</p>
-        </div>
-
-        <!-- Error Card -->
-        <div class="error-card" id="error-card"></div>
-
-        <!-- Results -->
-        <div class="results-container" id="results-container">
-
-            <!-- Route Tabs -->
-            <div class="route-tabs" id="route-tabs"></div>
-
-            <!-- Horizon Cards -->
-            <div class="horizon-grid" id="horizon-grid"></div>
-
-            <!-- Meta Strip -->
-            <div class="meta-strip" id="meta-strip"></div>
-
-        </div>
-    </main>
-</div>
-
-<script>
-    // ─── Landmark auto-fill ───
-    function fillFromLandmark(type) {
-        const select = document.getElementById(type === 'source' ? 'source-landmark' : 'dest-landmark');
-        const val = select.value;
-        if (!val) return;
-        const [lat, lon] = val.split(',').map(Number);
-        document.getElementById(type === 'source' ? 'source-lat' : 'dest-lat').value = lat;
-        document.getElementById(type === 'source' ? 'source-lon' : 'dest-lon').value = lon;
-    }
-
-    // ─── State ───
-    let allRoutes = [];
-    let activeRouteIdx = 0;
-
-    // ─── API Call ───
-    async function predictETA() {
-        const srcLat = parseFloat(document.getElementById('source-lat').value);
-        const srcLon = parseFloat(document.getElementById('source-lon').value);
-        const dstLat = parseFloat(document.getElementById('dest-lat').value);
-        const dstLon = parseFloat(document.getElementById('dest-lon').value);
-
-        if (isNaN(srcLat) || isNaN(srcLon) || isNaN(dstLat) || isNaN(dstLon)) {
-            showError('Please fill in all coordinate fields before predicting.');
-            return;
-        }
-
-        // Validate bounds
-        if (srcLat < 12.70 || srcLat > 13.20 || srcLon < 77.30 || srcLon > 77.80 ||
-            dstLat < 12.70 || dstLat > 13.20 || dstLon < 77.30 || dstLon > 77.80) {
-            showError('Coordinates outside supported region. CGEE supports Bengaluru, India (lat 12.7–13.2, lon 77.3–77.8).');
-            return;
-        }
-
-        setLoading(true);
-        hideError();
-
-        try {
-            const res = await fetch('/predict-route-eta', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    source: { lat: srcLat, lon: srcLon },
-                    destination: { lat: dstLat, lon: dstLon }
-                })
-            });
-
-            const data = await res.json();
-
-            if (!res.ok || data.error) {
-                showError(data.detail || data.error || 'Could not compute ETA — ensure the server is running and coordinates are within Bengaluru.');
-                setLoading(false);
-                return;
-            }
-
-            allRoutes = data.routes || [];
-            if (allRoutes.length === 0) {
-                showError('No routes found between the selected locations.');
-                setLoading(false);
-                return;
-            }
-
-            activeRouteIdx = 0;
-            renderRouteTabs();
-            renderResults(allRoutes[0]);
-            document.getElementById('empty-state').style.display = 'none';
-            document.getElementById('results-container').classList.add('visible');
-
-        } catch (err) {
-            showError('Could not compute ETA — ensure the server is running and coordinates are within Bengaluru (lat 12.7–13.2, lon 77.3–77.8).');
-        }
-
-        setLoading(false);
-    }
-
-    // ─── Route Tabs ───
-    function renderRouteTabs() {
-        const container = document.getElementById('route-tabs');
-        container.innerHTML = '';
-        allRoutes.forEach((route, i) => {
-            const tab = document.createElement('button');
-            tab.className = 'route-tab' + (i === activeRouteIdx ? ' active' : '');
-            tab.innerHTML = `<span class="tab-dot" style="background:${route.color}"></span>${route.label}`;
-            tab.onclick = () => {
-                activeRouteIdx = i;
-                renderRouteTabs();
-                renderResults(allRoutes[i]);
-            };
-            container.appendChild(tab);
-        });
-    }
-
-    // ─── Render Results ───
-    function renderResults(route) {
-        const etas = route.eta_minutes;
-        const conf = route.confidence;
-        const meta = route.meta;
-
-        // Horizon cards
-        const grid = document.getElementById('horizon-grid');
-        grid.innerHTML = '';
-
-        const horizonNames = { '1_hour': '1 Hour', '2_hour': '2 Hour', '4_hour': '4 Hour' };
-
-        for (const [key, label] of Object.entries(horizonNames)) {
-            const est = etas[key];
-            const c = conf[key];
-
-            let confClass, confLabel;
-            if (c >= 0.85) { confClass = 'confidence-high'; confLabel = 'High Confidence'; }
-            else if (c >= 0.70) { confClass = 'confidence-moderate'; confLabel = 'Moderate'; }
-            else { confClass = 'confidence-low'; confLabel = 'Low Confidence'; }
-
-            // Range bar positioning
-            const range = est.upper_bound - est.lower_bound;
-            const fillLeft = range > 0 ? 0 : 0;
-            const fillWidth = 100;
-            const markerPos = range > 0 ? ((est.estimate - est.lower_bound) / range) * 100 : 50;
-
-            const card = document.createElement('div');
-            card.className = 'horizon-card';
-            card.innerHTML = `
-                <div class="horizon-label">${label} Horizon</div>
-                <div class="horizon-estimate">${est.estimate.toFixed(1)}<span class="horizon-unit">min</span></div>
-                <div class="range-bar-container">
-                    <div class="range-bar-labels">
-                        <span>${est.lower_bound.toFixed(1)}</span>
-                        <span>${est.upper_bound.toFixed(1)}</span>
-                    </div>
-                    <div class="range-bar-track">
-                        <div class="range-bar-fill" style="left:0;width:100%"></div>
-                        <div class="range-bar-marker" style="left:${markerPos}%"></div>
-                    </div>
-                </div>
-                <div class="confidence-badge ${confClass}">
-                    <span class="dot"></span>${confLabel} (${(c * 100).toFixed(0)}%)
-                </div>
-            `;
-            grid.appendChild(card);
-        }
-
-        // Meta strip
-        const strip = document.getElementById('meta-strip');
-        let incidentHtml;
-        if (meta.incident) {
-            incidentHtml = `
-                <div class="meta-item">
-                    <div class="incident-badge incident-active">
-                        ⚠ Incident Detected
-                    </div>
-                </div>
-                <div class="meta-item">
-                    <span class="meta-label">Severity</span>
-                    <span class="meta-value">${meta.avg_incident_severity.toFixed(2)}</span>
-                </div>
-                <div class="meta-item">
-                    <span class="meta-label">Affected Segments</span>
-                    <span class="meta-value">${meta.incident_segments}</span>
-                </div>
-            `;
-        } else {
-            incidentHtml = `
-                <div class="meta-item">
-                    <div class="incident-badge incident-clear">
-                        ✓ Clear Route
-                    </div>
-                </div>
-            `;
-        }
-
-        strip.innerHTML = `
-            <div class="meta-item">
-                <span class="meta-label">Distance</span>
-                <span class="meta-value">${meta.distance_km.toFixed(1)} km</span>
-            </div>
-            <div class="meta-item">
-                <span class="meta-label">Segments</span>
-                <span class="meta-value">${meta.segments} road segments</span>
-            </div>
-            ${incidentHtml}
-        `;
-    }
-
-    // ─── Helpers ───
-    function setLoading(on) {
-        document.getElementById('loading').classList.toggle('active', on);
-        document.getElementById('btn-predict').disabled = on;
-    }
-
-    function showError(msg) {
-        const el = document.getElementById('error-card');
-        el.innerHTML = `<strong>⚠ Error</strong>${msg}`;
-        el.classList.add('visible');
-        document.getElementById('empty-state').style.display = 'none';
-        document.getElementById('results-container').classList.remove('visible');
-    }
-
-    function hideError() {
-        document.getElementById('error-card').classList.remove('visible');
-    }
-</script>
+    </footer>
 
 </body>
 </html>

@@ -1,0 +1,9 @@
+Status: 200
+Total routes: 1
+
+--- Fastest Route (ID 1, color #3B82F6) ---
+  Distance: 13.02 km | Segments: 99 | Points: 100
+  Incident: True | Inc.Segs: 17 | Severity: 0.34 | Markers: 17
+  1_hour: 43.24m [40.15-46.32] conf=0.77
+  2_hour: 40.56m [37.02-44.11] conf=0.72
+  4_hour: 30.3m [26.14-34.47] conf=0.65

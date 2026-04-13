@@ -96,29 +96,26 @@ const MapView: React.FC<MapViewProps> = ({ source, destination, routes, selected
 
         {sortedRoutes.map((route) => {
           const isSelected = route.route_id === selectedRouteId;
-          const routeColor = route.color; // Always use the distinct route color
+          const routeColor = route.color;
           const eta1h = route.eta_minutes["1_hour"].estimate;
 
           return (
             <React.Fragment key={route.route_id}>
-              {/* Outer glow for selected route */}
-              {isSelected && (
-                <Polyline
-                  positions={route.meta.route_geometry.map(p => [p.lat, p.lon])}
-                  color={routeColor}
-                  weight={14}
-                  opacity={0.3}
-                  lineCap="round"
-                />
-              )}
-
-              {/* Main route polyline */}
+              {/* Outer glow for ALL routes — brighter for selected */}
               <Polyline
                 positions={route.meta.route_geometry.map(p => [p.lat, p.lon])}
                 color={routeColor}
-                weight={isSelected ? 8 : 4}
-                opacity={isSelected ? 1.0 : 0.4}
-                dashArray={isSelected ? undefined : '8, 8'}
+                weight={isSelected ? 16 : 12}
+                opacity={isSelected ? 0.35 : 0.2}
+                lineCap="round"
+              />
+
+              {/* Main route polyline — solid, vibrant, always visible */}
+              <Polyline
+                positions={route.meta.route_geometry.map(p => [p.lat, p.lon])}
+                color={routeColor}
+                weight={isSelected ? 7 : 5}
+                opacity={isSelected ? 1.0 : 0.85}
                 lineCap="round"
                 eventHandlers={{ click: () => onSelectRoute(route.route_id) }}
               >
@@ -139,18 +136,6 @@ const MapView: React.FC<MapViewProps> = ({ source, destination, routes, selected
                   )}
                 </Popup>
               </Polyline>
-
-              {/* Incident markers (only for selected route) */}
-              {isSelected && route.meta.incident_coordinates.map((coord, idx) => (
-                <Marker key={`inc-${route.route_id}-${idx}`} position={[coord.lat, coord.lon]} icon={incidentIcon}>
-                  <Tooltip direction="top" offset={[0, -14]}>
-                    <div style={{fontWeight:'bold', color:'#EF4444'}}>⚠ Incident Zone</div>
-                    <div style={{fontSize:'11px'}}>
-                      Severity: {(route.meta.avg_incident_severity * 100).toFixed(0)}% — Traffic impacted
-                    </div>
-                  </Tooltip>
-                </Marker>
-              ))}
             </React.Fragment>
           );
         })}

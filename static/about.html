@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CGEE™ | How It Works</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563EB;
+            --bg: #ffffff;
+            --text-main: #111827;
+            --text-muted: #6B7280;
+            --border: #E5E7EB;
+            --bg-light: #F9FAFB;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', sans-serif;
+            color: var(--text-main);
+            background-color: var(--bg);
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        a { text-decoration: none; color: inherit; }
+        
+        /* Navigation */
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 24px; border-bottom: 1px solid var(--border);
+            background-color: var(--bg); position: sticky; top: 0; z-index: 100;
+        }
+        .logo { font-weight: 700; font-size: 20px; color: var(--primary); }
+        .nav-links { display: flex; gap: 24px; }
+        .nav-links a { font-weight: 500; color: var(--text-muted); transition: color 0.2s; padding-bottom: 2px; }
+        .nav-links a:hover { color: var(--text-main); }
+        .nav-links a.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
+
+        /* Container */
+        .container { max-width: 800px; margin: 0 auto; padding: 60px 24px; width: 100%; }
+
+        /* Hero */
+        .hero { text-align: center; margin-bottom: 60px; }
+        .hero h1 { font-size: 40px; margin-bottom: 16px; }
+        .hero p { font-size: 18px; color: var(--text-muted); max-width: 600px; margin: 0 auto; }
+
+        /* Vertical Timeline */
+        .arch-timeline { position: relative; margin-bottom: 60px; }
+        .arch-timeline::before {
+            content: ''; position: absolute; left: 24px; top: 0; bottom: 0; 
+            width: 2px; background: var(--border);
+        }
+        .arch-step { position: relative; padding-left: 64px; margin-bottom: 40px; }
+        .arch-step:last-child { margin-bottom: 0; }
+        .arch-num {
+            position: absolute; left: 8px; top: 0; width: 34px; height: 34px;
+            background: var(--bg); border: 2px solid var(--primary); color: var(--primary);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-weight: 700; z-index: 2;
+        }
+        .arch-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+        .arch-desc { color: var(--text-muted); font-size: 15px; }
+
+        /* Cards */
+        .card {
+            background: var(--bg-light); border: 1px solid var(--border);
+            border-radius: 12px; padding: 32px; margin-bottom: 32px;
+        }
+        .card-title { font-size: 20px; font-weight: 600; margin-bottom: 16px; }
+        
+        .patent-claims { margin-top: 16px; padding-left: 20px; color: var(--text-muted); font-size: 15px;}
+        .patent-claims li { margin-bottom: 8px; }
+
+        .metrics-table { width: 100%; border-collapse: collapse; margin-top: 16px; background: white;}
+        .metrics-table th, .metrics-table td { padding: 12px 16px; text-align: left; border: 1px solid var(--border); }
+        .metrics-table th { background: var(--bg-light); font-weight: 600; color: var(--text-main); font-size: 14px;}
+        .metrics-table td { font-size: 15px; color: var(--text-muted); }
+
+        /* Footer */
+        footer {
+            margin-top: auto; border-top: 1px solid var(--border); padding: 32px 24px;
+            display: flex; justify-content: space-between; align-items: center;
+            max-width: 1000px; margin: auto auto 0; width: 100%;
+        }
+        .footer-text { color: var(--text-muted); font-size: 14px; }
+        .footer-links { display: flex; gap: 16px; font-size: 14px; color: var(--text-muted); }
+        .footer-links a:hover { color: var(--primary); }
+
+        @media (max-width: 768px) {
+            .arch-timeline::before { left: 16px; }
+            .arch-step { padding-left: 48px; }
+            .arch-num { left: 0; width: 34px; height: 34px; font-size: 14px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <a href="/static/index.html" class="logo">CGEE™</a>
+        <nav class="nav-links">
+            <a href="/static/app.html">Predict</a>
+            <a href="/static/about.html" class="active">How It Works</a>
+            <a href="/static/docs.html">API Docs</a>
+        </nav>
+    </header>
+
+    <main class="container">
+        <section class="hero">
+            <h1>How CGEE™ Works</h1>
+            <p>A patented system combining graph routing with machine learning for context-aware travel time prediction.</p>
+        </section>
+
+        <section class="arch-timeline">
+            <div class="arch-step">
+                <div class="arch-num">1</div>
+                <div class="arch-title">Graph Construction</div>
+                <div class="arch-desc">The road network of Bengaluru is loaded from OpenStreetMap using OSMnx. Intersections become nodes, road segments become weighted edges with real distances.</div>
+            </div>
+            <div class="arch-step">
+                <div class="arch-num">2</div>
+                <div class="arch-title">Shortest Path Routing</div>
+                <div class="arch-desc">Given source and destination coordinates, the nearest graph nodes are found and the shortest path is computed using Dijkstra's algorithm weighted by road segment length.</div>
+            </div>
+            <div class="arch-step">
+                <div class="arch-num">3</div>
+                <div class="arch-title">Feature Engineering (Per Segment)</div>
+                <div class="arch-desc">For each road segment on the route, a 7-feature vector is constructed: lag speed, hour of day (sine/cosine encoded), peak hour flag, incident flag, and incident severity.</div>
+            </div>
+            <div class="arch-step">
+                <div class="arch-num">4</div>
+                <div class="arch-title">Multi-Horizon ML Prediction</div>
+                <div class="arch-desc">Three independently trained XGBoost models predict traffic speed for 1-hour, 2-hour, and 4-hour future windows. Each model captures different congestion patterns across time.</div>
+            </div>
+            <div class="arch-step">
+                <div class="arch-num">5</div>
+                <div class="arch-title">ETA Aggregation</div>
+                <div class="arch-desc">Segment ETAs are computed as Distance ÷ Predicted Speed, then summed across all route segments. Uncertainty bands and confidence scores are derived from prediction variance.</div>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="card-title">Patent Information</div>
+            <p style="color: var(--text-muted); font-size: 15px;">The Contextual Graph ETA Engine (CGEE™) is a published invention by Devansh Shukla and Kirti Paliwal, Department of Computer Science & Engineering, Manipal University Jaipur, Rajasthan, India.</p>
+            <ul class="patent-claims">
+                <li>Segment-level multi-horizon predictive modeling integrated with graph routing</li>
+                <li>Dynamic contextual scaling function applied post-prediction</li>
+                <li>Modular architecture enabling independent model versioning</li>
+                <li>ETA computation on edges rather than route-average</li>
+            </ul>
+        </section>
+
+        <section class="card">
+            <div class="card-title">Model Performance (XGBoost on synthetic Bengaluru traffic data)</div>
+            <table class="metrics-table">
+                <thead>
+                    <tr>
+                        <th>Horizon</th>
+                        <th>MAE</th>
+                        <th>RMSE</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1 Hour</td>
+                        <td>~0.9 km/h</td>
+                        <td>~1.6 km/h</td>
+                    </tr>
+                    <tr>
+                        <td>2 Hour</td>
+                        <td>~0.95 km/h</td>
+                        <td>~1.7 km/h</td>
+                    </tr>
+                    <tr>
+                        <td>4 Hour</td>
+                        <td>~1.0 km/h</td>
+                        <td>~1.8 km/h</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-text">&copy; 2026 Contextual Graph ETA Engine (CGEE™)</div>
+        <div class="footer-links">
+            <a href="/static/about.html">About</a>
+            <a href="/static/docs.html">API Docs</a>
+            <a href="#">GitHub</a>
+        </div>
+    </footer>
+
+</body>
+</html>

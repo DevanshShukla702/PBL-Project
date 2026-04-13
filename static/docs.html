@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CGEE™ | API Reference</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563EB;
+            --primary-hover: #1D4ED8;
+            --bg: #ffffff;
+            --text-main: #111827;
+            --text-muted: #4B5563;
+            --border: #E5E7EB;
+            --bg-code: #F3F4F6;
+            --bg-light: #F9FAFB;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', sans-serif;
+            color: var(--text-main);
+            background-color: var(--bg);
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        a { text-decoration: none; color: inherit; }
+        
+        /* Navigation */
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 24px; border-bottom: 1px solid var(--border);
+            background-color: var(--bg); position: sticky; top: 0; z-index: 100;
+        }
+        .logo { font-weight: 700; font-size: 20px; color: var(--primary); }
+        .nav-links { display: flex; gap: 24px; }
+        .nav-links a { font-weight: 500; color: var(--text-muted); transition: color 0.2s; padding-bottom: 2px; }
+        .nav-links a:hover { color: var(--text-main); }
+        .nav-links a.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
+
+        /* Container */
+        .container { max-width: 800px; margin: 0 auto; padding: 60px 24px; width: 100%; }
+
+        /* Hero */
+        .hero { margin-bottom: 40px; }
+        .hero h1 { font-size: 36px; margin-bottom: 12px; }
+        .hero p { font-size: 18px; color: var(--text-muted); }
+
+        /* Base URL */
+        .base-url-card {
+            background: var(--bg-light); border: 1px solid var(--border); border-radius: 8px; padding: 16px;
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 48px;
+        }
+        .base-url { font-family: monospace; font-size: 16px; font-weight: 600; color: var(--primary); }
+        .base-url-note { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+        .btn-copy { background: white; border: 1px solid var(--border); border-radius: 4px; padding: 6px 12px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+        .btn-copy:hover { border-color: var(--primary); color: var(--primary); }
+
+        /* Endpoints */
+        .endpoint { margin-bottom: 56px; padding-bottom: 40px; border-bottom: 1px solid var(--border); }
+        .endpoint:last-of-type { border-bottom: none; margin-bottom: 32px; padding-bottom: 0; }
+        
+        .method-badge {
+            display: inline-block; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 13px; margin-right: 12px;
+        }
+        .method-get { background-color: #E0F2FE; color: #0284C7; }
+        .method-post { background-color: #DCFCE7; color: #16A34A; }
+        
+        .endpoint-title { font-family: monospace; font-size: 18px; font-weight: 600; display: flex; align-items: center; margin-bottom: 12px; }
+        .endpoint-desc { color: var(--text-muted); font-size: 15px; margin-bottom: 16px; }
+
+        .code-block {
+            background-color: var(--bg-code);
+            border-radius: 8px; padding: 16px; overflow-x: auto;
+            font-family: monospace; font-size: 14px; color: #1F2937;
+            margin-bottom: 16px; border: 1px solid var(--border);
+        }
+        .code-label { font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; letter-spacing: 0.5px; }
+
+        .error-list { font-size: 14px; color: var(--text-muted); margin-top: 12px; }
+
+        /* Try it Live */
+        .try-it-section {
+            background-color: white; border: 1px solid var(--primary);
+            border-radius: 12px; padding: 32px; margin-top: 24px;
+            box-shadow: 0 4px 6px -1px rgba(37,99,235,0.1);
+        }
+        .try-title { font-size: 20px; font-weight: 600; margin-bottom: 24px; color: var(--primary); }
+        
+        .inputs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+        .input-group { display: flex; flex-direction: column; gap: 6px; }
+        label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+        input { padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; }
+        input:focus { outline: none; border-color: var(--primary); }
+        
+        .btn-live {
+            background: var(--primary); color: white; border: none; padding: 12px 24px;
+            border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s;
+        }
+        .btn-live:hover { background: var(--primary-hover); }
+        
+        #live-response { display: none; margin-top: 24px; }
+
+        /* Validation Box */
+        .validation-box {
+            background: #FEF2F2; border: 1px solid #FECACA; padding: 16px; border-radius: 8px;
+            color: #991B1B; font-size: 14px; margin-bottom: 48px;
+        }
+        .validation-title { font-weight: 600; margin-bottom: 4px; }
+
+        /* Footer */
+        footer {
+            margin-top: auto; border-top: 1px solid var(--border); padding: 32px 24px;
+            display: flex; justify-content: space-between; align-items: center;
+            max-width: 1000px; margin: auto auto 0; width: 100%;
+        }
+        .footer-text { color: var(--text-muted); font-size: 14px; }
+        .footer-links { display: flex; gap: 16px; font-size: 14px; color: var(--text-muted); }
+        .footer-links a:hover { color: var(--primary); }
+
+        @media (max-width: 600px) {
+            .inputs-grid { grid-template-columns: 1fr; }
+            .base-url-card { flex-direction: column; align-items: flex-start; gap: 12px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <a href="/static/index.html" class="logo">CGEE™</a>
+        <nav class="nav-links">
+            <a href="/static/app.html">Predict</a>
+            <a href="/static/about.html">How It Works</a>
+            <a href="/static/docs.html" class="active">API Docs</a>
+        </nav>
+    </header>
+
+    <main class="container">
+        <section class="hero">
+            <h1>API Reference</h1>
+            <p>CGEE™ exposes a simple REST API for real-time ETA prediction.</p>
+        </section>
+
+        <div class="base-url-card">
+            <div>
+                <div class="base-url" id="baseUrlText">http://localhost:8000</div>
+                <div class="base-url-note">Replace with your deployed domain in production.</div>
+            </div>
+            <button class="btn-copy" onclick="navigator.clipboard.writeText('http://localhost:8000')">Copy URL</button>
+        </div>
+
+        <div class="validation-box">
+            <div class="validation-title">Data Constraints</div>
+            Coordinates must be within Bengaluru bounds:<br>
+            Latitude: 12.70 to 13.20 &nbsp;&middot;&nbsp; Longitude: 77.30 to 77.80
+        </div>
+
+        <div class="endpoint">
+            <div class="endpoint-title">
+                <span class="method-badge method-get">GET</span> /health
+            </div>
+            <p class="endpoint-desc">Check engine initialization status. Use this to verify the road graph and models are fully loaded into memory.</p>
+            
+            <div class="code-label">Response Example</div>
+            <pre class="code-block"><code>{
+  "status": "ok",
+  "engine_ready": true,
+  "graph": {"nodes": 34521, "edges": 82104},
+  "models": ["1_hour", "2_hour", "4_hour"],
+  "route_cache": {"hits": 12, "misses": 5, "maxsize": 256}
+}</code></pre>
+        </div>
+
+        <div class="endpoint">
+            <div class="endpoint-title">
+                <span class="method-badge method-post">POST</span> /predict-route-eta
+            </div>
+            <p class="endpoint-desc">Predict multi-horizon ETA for a route. Calculates optimal paths via graph routing and evaluates segment-level ETA using contextual ML models.</p>
+            
+            <div class="code-label">Request Body</div>
+            <pre class="code-block"><code>{
+  "source": {"lat": 13.1007, "lon": 77.5963},
+  "destination": {"lat": 12.8399, "lon": 77.6770}
+}</code></pre>
+
+            <div class="code-label">Successful Response (200 OK)</div>
+            <pre class="code-block"><code>{
+  "routes": [
+    {
+      "route_id": 1,
+      "label": "Fastest Route",
+      "color": "#3B82F6",
+      "eta_minutes": {
+        "1_hour": {"estimate": 38.2, "lower_bound": 34.1, "upper_bound": 43.7},
+        "2_hour": {"estimate": 44.6, "lower_bound": 39.2, "upper_bound": 51.3},
+        "4_hour": {"estimate": 52.1, "lower_bound": 44.8, "upper_bound": 60.9}
+      },
+      "confidence": {"1_hour": 0.87, "2_hour": 0.81, "4_hour": 0.73},
+      "meta": {
+        "distance_km": 28.4,
+        "segments": 112,
+        "incident": true,
+        "incident_segments": 3,
+        "avg_incident_severity": 0.41,
+        "route_geometry": [{"lat":13.1,"lon":77.5}, "..."]
+      }
+    }
+  ]
+}</code></pre>
+            <div class="error-list">
+                <b>Error Responses:</b><br>
+                • <code>422 Unprocessable Entity</code> — Invalid coordinates (out of bounds).<br>
+                • <code>503 Service Unavailable</code> — Engine not ready yet.<br>
+                • <code>500 Internal Server Error</code> — Pathfinding or computation failed.
+            </div>
+        </div>
+
+        <div class="endpoint">
+            <div class="endpoint-title">
+                <span class="method-badge method-get">GET</span> /cache/clear
+            </div>
+            <p class="endpoint-desc">Clear the route cache. Useful after graph updates or memory cleanup.</p>
+        </div>
+
+        <section class="try-it-section">
+            <h2 class="try-title">Try it Live</h2>
+            <div class="inputs-grid">
+                <div class="input-group">
+                    <label>Source Latitude</label>
+                    <input type="number" id="try-src-lat" value="13.1007" step="0.0001">
+                </div>
+                <div class="input-group">
+                    <label>Source Longitude</label>
+                    <input type="number" id="try-src-lon" value="77.5963" step="0.0001">
+                </div>
+                <div class="input-group">
+                    <label>Destination Latitude</label>
+                    <input type="number" id="try-dst-lat" value="12.8399" step="0.0001">
+                </div>
+                <div class="input-group">
+                    <label>Destination Longitude</label>
+                    <input type="number" id="try-dst-lon" value="77.6770" step="0.0001">
+                </div>
+            </div>
+            <button class="btn-live" id="try-btn" onclick="runLiveTest()">Execute POST /predict-route-eta</button>
+
+            <div id="live-response">
+                <div class="code-label" id="live-status">Response</div>
+                <pre class="code-block"><code id="live-code"></code></pre>
+            </div>
+        </section>
+
+    </main>
+
+    <footer>
+        <div class="footer-text">&copy; 2026 Contextual Graph ETA Engine (CGEE™)</div>
+        <div class="footer-links">
+            <a href="/static/about.html">About</a>
+            <a href="/static/docs.html">API Docs</a>
+            <a href="#">GitHub</a>
+        </div>
+    </footer>
+
+    <script>
+        // Make the base URL dynamic so it matches where it's served
+        document.getElementById('baseUrlText').textContent = window.location.origin;
+
+        async function runLiveTest() {
+            const btn = document.getElementById('try-btn');
+            const resBox = document.getElementById('live-response');
+            const codeBox = document.getElementById('live-code');
+            const statusLabel = document.getElementById('live-status');
+
+            const payload = {
+                source: {
+                    lat: parseFloat(document.getElementById('try-src-lat').value),
+                    lon: parseFloat(document.getElementById('try-src-lon').value)
+                },
+                destination: {
+                    lat: parseFloat(document.getElementById('try-dst-lat').value),
+                    lon: parseFloat(document.getElementById('try-dst-lon').value)
+                }
+            };
+
+            btn.disabled = true;
+            btn.textContent = 'Executing...';
+            resBox.style.display = 'block';
+            codeBox.textContent = 'Waiting for response...';
+            statusLabel.textContent = 'Loading';
+
+            try {
+                const start = performance.now();
+                const res = await fetch('/predict-route-eta', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const ms = Math.round(performance.now() - start);
+                
+                statusLabel.textContent = `Response: HTTP ${res.status} (${ms}ms)`;
+                statusLabel.style.color = res.ok ? '#16A34A' : '#DC2626';
+
+                const data = await res.json();
+                
+                // Truncate geometry so it doesn't freeze the browser rendering
+                if(data.routes) {
+                    data.routes.forEach(r => {
+                        if(r.meta && r.meta.route_geometry) {
+                            r.meta.route_geometry = `[... ${r.meta.route_geometry.length} points omitted for display ...]`;
+                        }
+                    });
+                }
+
+                codeBox.textContent = JSON.stringify(data, null, 2);
+            } catch(e) {
+                statusLabel.textContent = 'Network Error';
+                statusLabel.style.color = '#DC2626';
+                codeBox.textContent = e.toString();
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Execute POST /predict-route-eta';
+            }
+        }
+    </script>
+</body>
+</html>

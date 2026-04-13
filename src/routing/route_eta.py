@@ -2,13 +2,15 @@ import osmnx as ox
 import networkx as nx
 import numpy as np
 import threading
+import logging
 from datetime import datetime
 from functools import lru_cache
-from copy import deepcopy
 
 from src.common.features import build_features
 from src.models.multi_horizon_xgb import load_models
 from src.routing.graph_loader import load_graph
+
+logger = logging.getLogger("cgee.engine")
 
 # ---------------------------------------------------
 # Global Cache
@@ -18,7 +20,6 @@ MODELS = None
 _engine_ready = False
 _engine_lock = threading.Lock()
 _init_error = None
-
 # ---------------------------------------------------
 # Initialize Engine
 # ---------------------------------------------------
@@ -28,39 +29,50 @@ def initialize_engine():
         if _engine_ready:
             return
         try:
-            print("[CGEE] Loading OSMnx road graph...")
+            logger.info("Loading road graph...")
             GRAPH = load_graph()
-            print(f"[CGEE] Graph loaded: {len(GRAPH.nodes)} nodes, "
-                  f"{len(GRAPH.edges)} edges")
-
-            print("[CGEE] Loading XGBoost models...")
+            logger.info(f"Graph loaded: {len(GRAPH.nodes)} nodes, {len(GRAPH.edges)} edges")
+            logger.info("Loading XGBoost models...")
             MODELS = load_models()
-            print(f"[CGEE] Models loaded: {list(MODELS.keys())}")
-
+            logger.info(f"Models loaded: {list(MODELS.keys())}")
             _engine_ready = True
             _init_error = None
-            print("[CGEE] Engine ready.")
-
+            logger.info("Engine fully ready.")
         except FileNotFoundError as e:
-            _init_error = f"Missing file: {str(e)}"
-            print(f"[CGEE ERROR] {_init_error}")
-            raise RuntimeError(_init_error)
+            _init_error = (
+                f"Missing required file: {e}. "
+                f"Ensure bengaluru.graphml is at data/raw/osm/ "
+                f"and xgb_1_hour.pkl, xgb_2_hour.pkl, xgb_4_hour.pkl "
+                f"are at models/"
+            )
+            logger.error(f"[CGEE INIT FAILED] {_init_error}")
+            # Reset so the next call to initialize_engine() retries
+            GRAPH = None
+            MODELS = None
+            _engine_ready = False
 
         except Exception as e:
-            _init_error = f"Engine init failed: {str(e)}"
-            print(f"[CGEE ERROR] {_init_error}")
-            raise RuntimeError(_init_error)
+            _init_error = f"Engine initialization error: {type(e).__name__}: {e}"
+            logger.error(f"[CGEE INIT FAILED] {_init_error}", exc_info=True)
+            GRAPH = None
+            MODELS = None
+            _engine_ready = False
 
-def is_engine_ready():
+
+def is_engine_ready() -> bool:
     return _engine_ready
+
+
+def get_init_error():
+    return _init_error
 
 # ---------------------------------------------------
 # Cached Shortest Path Lookup
 # ---------------------------------------------------
-@lru_cache(maxsize=200)
+@lru_cache(maxsize=256)
 def get_shortest_path(orig, dest):
     if not _engine_ready:
-        raise RuntimeError("Engine not initialized. Call initialize_engine() first.")
+        raise RuntimeError("Engine not ready. Call initialize_engine() first.")
     return ox.shortest_path(GRAPH, orig, dest, weight="length")
 
 # ---------------------------------------------------
@@ -77,7 +89,7 @@ FREE_FLOW = {
 }
 
 ROUTE_LABELS = ["Fastest Route", "Alternate Route", "Scenic Route"]
-ROUTE_COLORS = ["#3B82F6", "#A855F7", "#14B8A6"]
+ROUTE_COLORS = ["#00BFFF", "#FF6B2B", "#00E676"]
 
 # ---------------------------------------------------
 # BUG FIX 1: Horizon-Specific Feature Modulation
@@ -138,7 +150,7 @@ LOAD_FACTORS = {
 # ---------------------------------------------------
 # K-Shortest Paths via Edge Penalty Method
 # ---------------------------------------------------
-def find_k_routes(orig, dest, k=3, penalty=5.0):
+def find_k_routes(orig, dest, k=1, penalty=5.0):
     """
     Generate up to k distinct routes using iterative edge penalty.
     Maintains a dictionary of edge penalties to dynamically calculate
@@ -150,7 +162,11 @@ def find_k_routes(orig, dest, k=3, penalty=5.0):
     edge_penalties = {}
 
     def dynamic_weight(u, v, d):
-        base_length = d.get("length", 100)
+        edge_data = d[0] if 0 in d else d
+        base_length = edge_data.get("length", 100)
+        if isinstance(base_length, list):
+            base_length = base_length[0]
+
         # Apply accumulated penalty for this specific edge
         mult = edge_penalties.get((u, v), 1.0)
         return float(base_length) * float(mult)
@@ -368,81 +384,75 @@ def predict_route_etas(segments, road_types, hour, is_peak, incident_data):
 # ---------------------------------------------------
 def compute_route_eta(source: dict, destination: dict, departure_time=None):
     if not _engine_ready:
-        raise RuntimeError("Engine is still initializing. Please retry in a moment.")
+        err = _init_error or "Engine not yet initialized."
+        raise RuntimeError(err)
+
+    # Parse departure time
     try:
-
-        # Parse departure time
-        try:
-            if departure_time:
-                now = datetime.fromisoformat(departure_time)
-            else:
-                now = datetime.now()
-        except Exception:
+        if departure_time:
+            now = datetime.fromisoformat(departure_time)
+        else:
             now = datetime.now()
+    except Exception:
+        now = datetime.now()
 
-        hour = now.hour
-        is_peak = int(7 <= hour <= 10 or 17 <= hour <= 21)
+    hour = now.hour
+    is_peak = int(7 <= hour <= 10 or 17 <= hour <= 21)
 
-        # Find nearest graph nodes
-        orig = ox.distance.nearest_nodes(GRAPH, source["lon"], source["lat"])
-        dest = ox.distance.nearest_nodes(GRAPH, destination["lon"], destination["lat"])
+    # Find nearest graph nodes
+    orig = ox.distance.nearest_nodes(GRAPH, source["lon"], source["lat"])
+    dest = ox.distance.nearest_nodes(GRAPH, destination["lon"], destination["lat"])
 
-        # Generate up to 3 distinct routes
-        all_routes = find_k_routes(orig, dest, k=3)
+    # Generate routes (k=3 to provide alternate and scenic routes)
+    all_routes = find_k_routes(orig, dest, k=3)
 
-        if not all_routes:
-            return {
-                "error": "No path found between selected locations.",
-                "details": "Could not compute any route."
+    if not all_routes:
+        raise ValueError("No path found between selected locations.")
+
+    # Process each route
+    results = []
+    for i, route_nodes in enumerate(all_routes):
+        route_geometry, segments, road_types = extract_route_info(route_nodes)
+
+        if len(segments) == 0:
+            continue
+
+        total_distance = sum(segments)
+
+        # Per-segment probabilistic incident simulation (BUG FIX 2)
+        incident_data = simulate_incidents(
+            len(segments), road_types, hour, route_geometry
+        )
+
+        # Multi-horizon ETA prediction
+        etas, confidence_scores = predict_route_etas(
+            segments, road_types, hour, is_peak, incident_data
+        )
+
+        results.append({
+            "eta_minutes": etas,
+            "confidence": confidence_scores,
+            "meta": {
+                "distance_km": round(total_distance, 2),
+                "segments": len(segments),
+                "incident": incident_data["incident_count"] > 0,
+                "incident_segments": incident_data["incident_count"],
+                "avg_incident_severity": round(incident_data["avg_severity"], 2),
+                "route_geometry": route_geometry,
+                "incident_coordinates": incident_data["incident_coordinates"],
             }
+        })
 
-        # Process each route
-        results = []
-        for i, route_nodes in enumerate(all_routes):
-            route_geometry, segments, road_types = extract_route_info(route_nodes)
+    if not results:
+        raise ValueError("Route contains zero segments — graph edge extraction failed.")
 
-            if len(segments) == 0:
-                continue
+    # Sort results by the 1_hour ETA estimate, ascending
+    results.sort(key=lambda x: x["eta_minutes"]["1_hour"]["estimate"])
 
-            total_distance = sum(segments)
+    # Assign labels, colors, and IDs sequentially after sorting
+    for i, r in enumerate(results):
+        r["route_id"] = i + 1
+        r["label"] = ROUTE_LABELS[i] if i < len(ROUTE_LABELS) else f"Route {i+1}"
+        r["color"] = ROUTE_COLORS[i] if i < len(ROUTE_COLORS) else "#6B7280"
 
-            # Per-segment probabilistic incident simulation (BUG FIX 2)
-            incident_data = simulate_incidents(
-                len(segments), road_types, hour, route_geometry
-            )
-
-            # Multi-horizon ETA prediction
-            etas, confidence_scores = predict_route_etas(
-                segments, road_types, hour, is_peak, incident_data
-            )
-
-            results.append({
-                "route_id": i + 1,
-                "label": ROUTE_LABELS[i] if i < len(ROUTE_LABELS) else f"Route {i+1}",
-                "color": ROUTE_COLORS[i] if i < len(ROUTE_COLORS) else "#6B7280",
-                "eta_minutes": etas,
-                "confidence": confidence_scores,
-                "meta": {
-                    "distance_km": round(total_distance, 2),
-                    "segments": len(segments),
-                    "incident": incident_data["incident_count"] > 0,
-                    "incident_segments": incident_data["incident_count"],
-                    "avg_incident_severity": round(incident_data["avg_severity"], 2),
-                    "route_geometry": route_geometry,
-                    "incident_coordinates": incident_data["incident_coordinates"],
-                }
-            })
-
-        if not results:
-            return {
-                "error": "Route contains zero segments.",
-                "details": "Graph edge extraction failed for all routes."
-            }
-
-        return {"routes": results}
-
-    except Exception as e:
-        print("CRITICAL ERROR:", str(e))
-        import traceback
-        traceback.print_exc()
-        return {"error": "Computation failed", "details": str(e)}
+    return {"routes": results}

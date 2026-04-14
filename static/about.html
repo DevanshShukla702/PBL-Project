@@ -3,102 +3,117 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CGEE™ | How It Works</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <meta name="description" content="CGEE™ — Contextual Graph ETA Engine.  AI traffic prediction for Bengaluru with multi-horizon XGBoost models.">
+    <meta property="og:title" content="CGEE™ — Architecture & Tech Specs">
+    <meta property="og:description" content=" ML traffic ETA prediction with graph routing. 1h, 2h, 4h horizons.">
+    <meta name="theme-color" content="#1A56DB">
+    <title>CGEE™ | Architecture & Methodology</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #2563EB;
-            --bg: #ffffff;
-            --text-main: #111827;
-            --text-muted: #6B7280;
-            --border: #E5E7EB;
-            --bg-light: #F9FAFB;
+            --primary: #1A56DB;
+            --primary-light: #EBF2FF;
+            --primary-dark: #1039A0;
+            --accent: #0EA5E9;
+            --success: #059669;
+            --warning: #D97706;
+            --danger: #DC2626;
+            --text-primary: #0F172A;
+            --text-secondary: #475569;
+            --text-muted: #94A3B8;
+            --bg-base: #FFFFFF;
+            --bg-surface: #F8FAFC;
+            --bg-elevated: #F1F5F9;
+            --border: #E2E8F0;
+            --shadow-sm: 0 1px 3px rgba(15,23,42,0.08);
+            --shadow-md: 0 4px 16px rgba(15,23,42,0.10);
+            --shadow-lg: 0 8px 32px rgba(15,23,42,0.12);
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Inter', sans-serif;
-            color: var(--text-main);
-            background-color: var(--bg);
-            line-height: 1.6;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
+
+        @media (prefers-reduced-motion: no-preference) {
+            @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+            @keyframes slideInLeft { from { opacity: 0; transform: translateX(-40px); } to { opacity: 1; transform: translateX(0); } }
+            @keyframes slideInRight { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+            .anim-fadeUp { animation: fadeUp 0.6s ease forwards; opacity: 0; }
         }
-        a { text-decoration: none; color: inherit; }
+
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Inter', sans-serif; color: var(--text-secondary); background: var(--bg-base); line-height: 1.7; margin: 0; }
+        a { text-decoration: none; color: inherit; transition: all 0.2s; }
+        h1, h2, h3 { color: var(--text-primary); line-height: 1.2; font-weight: 700; margin-bottom: 16px;}
         
-        /* Navigation */
-        header {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 16px 24px; border-bottom: 1px solid var(--border);
-            background-color: var(--bg); position: sticky; top: 0; z-index: 100;
-        }
-        .logo { font-weight: 700; font-size: 20px; color: var(--primary); }
-        .nav-links { display: flex; gap: 24px; }
-        .nav-links a { font-weight: 500; color: var(--text-muted); transition: color 0.2s; padding-bottom: 2px; }
-        .nav-links a:hover { color: var(--text-main); }
-        .nav-links a.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
+        header { position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center; padding: 16px 32px; background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(226,232,240,0.8); }
+        .logo { font-weight: 800; font-size: 20px; color: var(--primary); }
+        .nav-links { display: flex; gap: 32px; }
+        .nav-links a { font-weight: 600; color: var(--text-secondary); position: relative; padding-bottom: 2px; }
+        .nav-links a::after { content: ''; position: absolute; width: 0; height: 2px; bottom: 0; left: 0; background-color: var(--primary); transition: width 0.2s ease; }
+        .nav-links a:hover { color: var(--text-primary); }
+        .nav-links a:hover::after { width: 100%; }
+        .nav-links a.active { color: var(--primary); }
+        .nav-links a.active::after { width: 100%; }
 
-        /* Container */
-        .container { max-width: 800px; margin: 0 auto; padding: 60px 24px; width: 100%; }
+        .hero { background: linear-gradient(135deg, var(--bg-surface) 0%, var(--primary-light) 100%); padding: 100px 24px 80px; text-align: center; }
+        .pill-badge { display: inline-block; background: var(--primary-light); border: 1px solid #BFDBFE; color: var(--primary); padding: 6px 16px; border-radius: 999px; font-weight: 700; font-size: 13px; text-transform: uppercase; margin-bottom: 24px; letter-spacing: 0.05em; }
+        .hero h1 { font-size: 48px; margin-bottom: 24px; }
+        .hero p { font-size: 18px; max-width: 600px; margin: 0 auto; color: var(--text-secondary); }
 
-        /* Hero */
-        .hero { text-align: center; margin-bottom: 60px; }
-        .hero h1 { font-size: 40px; margin-bottom: 16px; }
-        .hero p { font-size: 18px; color: var(--text-muted); max-width: 600px; margin: 0 auto; }
-
-        /* Vertical Timeline */
-        .arch-timeline { position: relative; margin-bottom: 60px; }
-        .arch-timeline::before {
-            content: ''; position: absolute; left: 24px; top: 0; bottom: 0; 
-            width: 2px; background: var(--border);
-        }
-        .arch-step { position: relative; padding-left: 64px; margin-bottom: 40px; }
-        .arch-step:last-child { margin-bottom: 0; }
-        .arch-num {
-            position: absolute; left: 8px; top: 0; width: 34px; height: 34px;
-            background: var(--bg); border: 2px solid var(--primary); color: var(--primary);
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            font-weight: 700; z-index: 2;
-        }
-        .arch-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
-        .arch-desc { color: var(--text-muted); font-size: 15px; }
-
-        /* Cards */
-        .card {
-            background: var(--bg-light); border: 1px solid var(--border);
-            border-radius: 12px; padding: 32px; margin-bottom: 32px;
-        }
-        .card-title { font-size: 20px; font-weight: 600; margin-bottom: 16px; }
+        .timeline-section { padding: 100px 24px; background: var(--bg-base); overflow: hidden; }
+        .timeline { position: relative; max-width: 1000px; margin: 0 auto; }
+        .timeline::after { content: ''; position: absolute; width: 3px; background-color: var(--primary-light); top: 0; bottom: 0; left: 50%; margin-left: -1.5px; z-index: 1; }
         
-        .patent-claims { margin-top: 16px; padding-left: 20px; color: var(--text-muted); font-size: 15px;}
-        .patent-claims li { margin-bottom: 8px; }
+        .tl-container { padding: 10px 40px; position: relative; width: 50%; box-sizing: border-box; opacity: 0; }
+        .tl-left { left: 0; }
+        .tl-right { left: 50%; }
+        
+        .tl-left.visible { animation: slideInLeft 0.6s ease forwards; }
+        .tl-right.visible { animation: slideInRight 0.6s ease forwards; }
 
-        .metrics-table { width: 100%; border-collapse: collapse; margin-top: 16px; background: white;}
-        .metrics-table th, .metrics-table td { padding: 12px 16px; text-align: left; border: 1px solid var(--border); }
-        .metrics-table th { background: var(--bg-light); font-weight: 600; color: var(--text-main); font-size: 14px;}
-        .metrics-table td { font-size: 15px; color: var(--text-muted); }
+        .tl-container::after { content: ''; position: absolute; width: 24px; height: 24px; right: -12px; background-color: white; border: 4px solid var(--primary); top: 32px; border-radius: 50%; z-index: 2; }
+        .tl-right::after { left: -12px; }
 
-        /* Footer */
-        footer {
-            margin-top: auto; border-top: 1px solid var(--border); padding: 32px 24px;
-            display: flex; justify-content: space-between; align-items: center;
-            max-width: 1000px; margin: auto auto 0; width: 100%;
-        }
-        .footer-text { color: var(--text-muted); font-size: 14px; }
-        .footer-links { display: flex; gap: 16px; font-size: 14px; color: var(--text-muted); }
-        .footer-links a:hover { color: var(--primary); }
+        .tl-content { padding: 32px; background-color: white; position: relative; border-radius: 12px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); transition: transform 0.3s; }
+        .tl-content:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
+        .tl-icon { background: var(--primary-light); color: var(--primary); width: 48px; height: 48px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+        .tl-code { background: var(--bg-surface); padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-family: monospace; font-size: 14px; margin-top: 16px; color: var(--primary-dark); }
 
-        @media (max-width: 768px) {
-            .arch-timeline::before { left: 16px; }
-            .arch-step { padding-left: 48px; }
-            .arch-num { left: 0; width: 34px; height: 34px; font-size: 14px; }
+        .patent-section { max-width: 1000px; margin: 0 auto 100px; padding: 48px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); border-radius: 16px; color: white; display: flex; gap: 48px; align-items: center; box-shadow: var(--shadow-lg); }
+        .patent-left h2 { color: white; margin-bottom: 24px; font-size: 32px;}
+        .inventors { display: flex; gap: 16px; margin: 24px 0 32px; }
+        .inventor-card { background: rgba(255,255,255,0.1); padding: 16px; border-radius: 12px; display: flex; align-items: center; gap: 12px; flex: 1; border: 1px solid rgba(255,255,255,0.2); }
+        .inv-ava { width: 48px; height: 48px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--primary); font-weight: 700; font-size: 18px; }
+        .inv-text strong { display: block; font-size: 16px; }
+        .inv-text span { font-size: 13px; opacity: 0.8; }
+        .claims-list { list-style: none; }
+        .claims-list li { margin-bottom: 12px; display: flex; gap: 12px; align-items: flex-start; font-size: 15px; opacity: 0.95; }
+        .patent-right { flex-shrink: 0; opacity: 0.2; }
+
+        .metrics-section { max-width: 1000px; margin: 0 auto 100px; text-align: center; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 48px; }
+        .metric-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 32px; box-shadow: var(--shadow-sm); border-top: 4px solid var(--primary); }
+        .mc-2 { border-top-color: var(--warning); }
+        .mc-3 { border-top-color: #0F766E; }
+        .mc-hz { text-transform: uppercase; font-size: 13px; font-weight: 700; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 16px; }
+        .mc-val { font-size: 48px; font-weight: 800; color: var(--text-primary); line-height: 1; margin-bottom: 8px; }
+        .mc-val span { font-size: 18px; color: var(--text-muted); font-weight: 500; }
+        .mc-sub { font-size: 14px; font-weight: 500; color: var(--text-secondary); display: flex; justify-content: center; gap: 12px;}
+
+        @media(max-width: 768px) {
+            .timeline::after { left: 31px; }
+            .tl-container { width: 100%; padding-left: 70px; padding-right: 25px; }
+            .tl-right { left: 0%; }
+            .tl-container::after { left: 15px; }
+            .patent-section { flex-direction: column; padding: 32px; }
+            .inventors { flex-direction: column; }
+            .metrics-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
+    <script>if(!localStorage.getItem('cgee_auth')){window.location.href='/static/login.html';}</script>
 
     <header>
-        <a href="/static/index.html" class="logo">CGEE™</a>
+        <a href="/static/index.html" class="logo">CGEE</a>
         <nav class="nav-links">
             <a href="/static/app.html">Predict</a>
             <a href="/static/about.html" class="active">How It Works</a>
@@ -106,90 +121,140 @@
         </nav>
     </header>
 
-    <main class="container">
-        <section class="hero">
-            <h1>How CGEE™ Works</h1>
-            <p>A patented system combining graph routing with machine learning for context-aware travel time prediction.</p>
-        </section>
+    <div class="hero">
+        <h1 class="anim-fadeUp">How CGEE Works</h1>
+        <p class="anim-fadeUp">Explore the internal technical architectures that drive our Contextual Graph ETA estimations globally inside the Bengaluru data zone.</p>
+    </div>
 
-        <section class="arch-timeline">
-            <div class="arch-step">
-                <div class="arch-num">1</div>
-                <div class="arch-title">Graph Construction</div>
-                <div class="arch-desc">The road network of Bengaluru is loaded from OpenStreetMap using OSMnx. Intersections become nodes, road segments become weighted edges with real distances.</div>
+    <div class="timeline-section">
+        <div class="timeline">
+            
+            <div class="tl-container tl-left">
+                <div class="tl-content">
+                    <div class="tl-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></div>
+                    <h3>Step 1: Graph Construction</h3>
+                    <p>We generate a deeply annotated multi-directed geographic graph structure mapping OSM boundary layouts seamlessly onto Python network topology.</p>
+                    <div class="tl-code">import osmnx as ox<br>G = ox.graph_from_place("Bengaluru")</div>
+                </div>
             </div>
-            <div class="arch-step">
-                <div class="arch-num">2</div>
-                <div class="arch-title">Shortest Path Routing</div>
-                <div class="arch-desc">Given source and destination coordinates, the nearest graph nodes are found and the shortest path is computed using Dijkstra's algorithm weighted by road segment length.</div>
+            
+            <div class="tl-container tl-right">
+                <div class="tl-content">
+                    <div class="tl-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+                    <h3>Step 2: Shortest Path Routing</h3>
+                    <p>Dijkstra's shortest-path runs implicitly using custom physical length extraction preventing multi-hop path distortions, alongside an edge-penalty solver computing k-distinct alternates.</p>
+                    <div class="tl-code">path = nx.shortest_path(G, o, d, weight=dyn_w)</div>
+                </div>
             </div>
-            <div class="arch-step">
-                <div class="arch-num">3</div>
-                <div class="arch-title">Feature Engineering (Per Segment)</div>
-                <div class="arch-desc">For each road segment on the route, a 7-feature vector is constructed: lag speed, hour of day (sine/cosine encoded), peak hour flag, incident flag, and incident severity.</div>
-            </div>
-            <div class="arch-step">
-                <div class="arch-num">4</div>
-                <div class="arch-title">Multi-Horizon ML Prediction</div>
-                <div class="arch-desc">Three independently trained XGBoost models predict traffic speed for 1-hour, 2-hour, and 4-hour future windows. Each model captures different congestion patterns across time.</div>
-            </div>
-            <div class="arch-step">
-                <div class="arch-num">5</div>
-                <div class="arch-title">ETA Aggregation</div>
-                <div class="arch-desc">Segment ETAs are computed as Distance ÷ Predicted Speed, then summed across all route segments. Uncertainty bands and confidence scores are derived from prediction variance.</div>
-            </div>
-        </section>
 
-        <section class="card">
-            <div class="card-title">Patent Information</div>
-            <p style="color: var(--text-muted); font-size: 15px;">The Contextual Graph ETA Engine (CGEE™) is a published invention by Devansh Shukla and Kirti Paliwal, Department of Computer Science & Engineering, Manipal University Jaipur, Rajasthan, India.</p>
-            <ul class="patent-claims">
-                <li>Segment-level multi-horizon predictive modeling integrated with graph routing</li>
-                <li>Dynamic contextual scaling function applied post-prediction</li>
-                <li>Modular architecture enabling independent model versioning</li>
-                <li>ETA computation on edges rather than route-average</li>
-            </ul>
-        </section>
+            <div class="tl-container tl-left">
+                <div class="tl-content">
+                    <div class="tl-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg></div>
+                    <h3>Step 3: Feature Engineering</h3>
+                    <p>The router strips the pure paths strictly back out into isolated discrete edge frames mapping metadata context arrays independently (road_type, length_km, severity_prob).</p>
+                    <div class="tl-code">X = [[hour, len_km, is_residential, ...]]</div>
+                </div>
+            </div>
 
-        <section class="card">
-            <div class="card-title">Model Performance (XGBoost on synthetic Bengaluru traffic data)</div>
-            <table class="metrics-table">
-                <thead>
-                    <tr>
-                        <th>Horizon</th>
-                        <th>MAE</th>
-                        <th>RMSE</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>1 Hour</td>
-                        <td>~0.9 km/h</td>
-                        <td>~1.6 km/h</td>
-                    </tr>
-                    <tr>
-                        <td>2 Hour</td>
-                        <td>~0.95 km/h</td>
-                        <td>~1.7 km/h</td>
-                    </tr>
-                    <tr>
-                        <td>4 Hour</td>
-                        <td>~1.0 km/h</td>
-                        <td>~1.8 km/h</td>
-                    </tr>
-                </tbody>
-            </table>
-        </section>
-    </main>
+            <div class="tl-container tl-right">
+                <div class="tl-content">
+                    <div class="tl-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="18" y="3" width="4" height="18"/><rect x="10" y="8" width="4" height="13"/><rect x="2" y="13" width="4" height="8"/></svg></div>
+                    <h3>Step 4: ML Prediction</h3>
+                    <p>Multi-horizon XGBoost machines execute independently in memory mapping physical path segments directly into timeline specific speeds (1hr models differ statistically from 4hr models).</p>
+                    <div class="tl-code">speed = model_1hr.predict(X_scaled)</div>
+                </div>
+            </div>
 
-    <footer>
-        <div class="footer-text">&copy; 2026 Contextual Graph ETA Engine (CGEE™)</div>
-        <div class="footer-links">
-            <a href="/static/about.html">About</a>
-            <a href="/static/docs.html">API Docs</a>
-            <a href="#">GitHub</a>
+            <div class="tl-container tl-left">
+                <div class="tl-content">
+                    <div class="tl-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+                    <h3>Step 5: ETA Aggregation</h3>
+                    <p>Predicted speeds mapped against absolute distances summarize to compute global path ETAs gracefully scaled down strictly applying synthetic contextual friction delays.</p>
+                    <div class="tl-code">ETA = Σ (distance_i / speed_i) × 60</div>
+                </div>
+            </div>
+
         </div>
-    </footer>
+    </div>
 
+    <div class="patent-section">
+        <div class="patent-left">
+            <h2>Intellectual Property</h2>
+            <p>This system is a filed patent invention (Form 1 submission, 2026) by:</p>
+            <div class="inventors">
+                <div class="inventor-card">
+                    <div class="inv-ava">DS</div>
+                    <div class="inv-text"><strong>Devansh Shukla</strong><span>Inventor &middot; MUJ CSE</span></div>
+                </div>
+                <div class="inventor-card">
+                    <div class="inv-ava">KP</div>
+                    <div class="inv-text"><strong>Kirti Paliwal</strong><span>Inventor &middot; MUJ CSE</span></div>
+                </div>
+            </div>
+            <ul class="claims-list">
+                <li><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg> Segment-level multi-horizon predictive modeling with graph routing</li>
+                <li><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg> Dynamic contextual scaling function (post-prediction constraint modeling)</li>
+                <li><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg> Patented incident severity to map-speed mathematical modulation formula</li>
+            </ul>
+        </div>
+        <div class="patent-right">
+            <svg width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+        </div>
+    </div>
+
+    <div class="metrics-section">
+        <h2>Benchmark Results</h2>
+        <p style="color:var(--text-muted); margin-bottom: 32px;">Trained on localized synthetic Bengaluru multi-segment traffic data architectures.</p>
+        
+        <div class="metrics-grid">
+            <div class="metric-card mc-1">
+                <div class="mc-hz">1 Hour Horizon</div>
+                <div class="mc-val" data-val="0.92">0.0 <span>MAE</span></div>
+                <div class="mc-sub"><span>RMSE: 1.15</span><span>R²: 0.94</span></div>
+            </div>
+            <div class="metric-card mc-2">
+                <div class="mc-hz">2 Hour Horizon</div>
+                <div class="mc-val" data-val="1.14">0.0 <span>MAE</span></div>
+                <div class="mc-sub"><span>RMSE: 1.45</span><span>R²: 0.89</span></div>
+            </div>
+            <div class="metric-card mc-3">
+                <div class="mc-hz">4 Hour Horizon</div>
+                <div class="mc-val" data-val="1.53">0.0 <span>MAE</span></div>
+                <div class="mc-sub"><span>RMSE: 1.95</span><span>R²: 0.82</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Timeline animations
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.2 });
+        document.querySelectorAll('.tl-container').forEach(el => observer.observe(el));
+
+        // Animated metric counters
+        const metricObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if(entry.isIntersecting) {
+                    const el = entry.target.querySelector('.mc-val');
+                    const target = parseFloat(el.getAttribute('data-val'));
+                    let current = 0;
+                    const increment = target / 40;
+                    const timer = setInterval(() => {
+                        current += increment;
+                        if(current >= target) { clearInterval(timer); current = target; }
+                        el.innerHTML = current.toFixed(2) + ' <span>MAE</span>';
+                    }, 20);
+                    metricObserver.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.5 });
+        document.querySelectorAll('.metric-card').forEach(el => metricObserver.observe(el));
+    </script>
 </body>
 </html>

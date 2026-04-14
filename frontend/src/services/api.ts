@@ -1,38 +1,39 @@
-import axios from 'axios';
-import type { PredictionRequest, PredictionResponse, NominatimResult } from '../types/eta';
+export interface Coordinate { lat: number; lon: number; label?: string; }
 
-const API_BASE_URL = import.meta.env.DEV 
-  ? '/api' 
-  : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000');
+export interface RouteResponse {
+  route_id: number;
+  label: string;
+  eta_minutes: {
+    '1_hour': { estimate: number; lower_bound: number; upper_bound: number };
+    '2_hour': { estimate: number; lower_bound: number; upper_bound: number };
+    '4_hour': { estimate: number; lower_bound: number; upper_bound: number };
+  };
+  confidence: { '1_hour': number; '2_hour': number; '4_hour': number };
+  meta: {
+    distance_km: number;
+    segments: number;
+    incident: boolean;
+    incident_segments: number;
+    avg_incident_severity: number;
+    route_geometry: { lat: number; lon: number }[];
+  };
+}
 
-export const etaApi = {
-  predictRoute: async (data: PredictionRequest): Promise<PredictionResponse> => {
-    const response = await axios.post<PredictionResponse>(`${API_BASE_URL}/predict-route-eta`, data);
-    return response.data;
-  }
+export const checkHealth = async () => {
+  const res = await fetch('/health');
+  if (!res.ok) throw new Error('Offline');
+  return await res.json();
 };
 
-export const geocodingApi = {
-  search: async (query: string): Promise<NominatimResult[]> => {
-    const response = await axios.get<NominatimResult[]>('https://nominatim.openstreetmap.org/search', {
-      params: {
-        q: `${query} Bengaluru`,
-        format: 'json',
-        limit: 5,
-        viewbox: '77.4,13.2,77.8,12.8',
-        bounded: 1,
-      }
-    });
-    return response.data;
-  },
-  reverse: async (lat: number, lon: number): Promise<NominatimResult> => {
-    const response = await axios.get<NominatimResult>('https://nominatim.openstreetmap.org/reverse', {
-      params: {
-        lat,
-        lon,
-        format: 'json',
-      }
-    });
-    return response.data;
+export const predictRouteETA = async (data: any) => {
+  const res = await fetch('/predict-route-eta', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.detail || 'Prediction failed');
   }
+  return await res.json();
 };

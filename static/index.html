@@ -3,280 +3,582 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CGEE™ | Predict Your Journey Before You Drive</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <meta name="description" content="CGEE — Contextual Graph ETA Engine. AI-powered traffic prediction for Bengaluru with multi-horizon XGBoost models.">
+    <meta property="og:title" content="CGEE — Predict Your Journey">
+    <meta property="og:description" content="ML traffic ETA prediction with graph routing. 1h, 2h, 4h horizons.">
+    <meta name="theme-color" content="#050C1F">
+    <title>CGEE | Predict Your Journey Before You Drive</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
         :root {
-            --primary: #2563EB;
-            --primary-hover: #1D4ED8;
-            --bg: #ffffff;
-            --text-main: #111827;
-            --text-muted: #6B7280;
-            --border: #E5E7EB;
-            --bg-light: #F9FAFB;
+            --primary: #1A56DB;
+            --primary-light: #EBF2FF;
+            --accent: #0EA5E9;
+            --success: #059669;
+            --text-primary: #0F172A;
+            --text-secondary: #475569;
+            --border: #E2E8F0;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Inter', sans-serif;
-            color: var(--text-main);
-            background-color: var(--bg);
-            line-height: 1.6;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-        }
+
+        html { scroll-behavior: smooth; }
+
+        body { font-family: 'Inter', sans-serif; background: #050C1F; color: white; overflow-x: hidden; }
+
         a { text-decoration: none; color: inherit; }
-        
-        /* Navigation */
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 16px 24px;
-            border-bottom: 1px solid var(--border);
-            background-color: var(--bg);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-        .logo { font-weight: 700; font-size: 20px; color: var(--primary); }
-        .nav-links { display: flex; gap: 24px; }
-        .nav-links a {
-            font-weight: 500;
-            color: var(--text-muted);
-            transition: color 0.2s;
-            padding-bottom: 2px;
-        }
-        .nav-links a:hover { color: var(--text-main); }
-        .nav-links a.active {
-            color: var(--primary);
-            border-bottom: 2px solid var(--primary);
-        }
 
-        /* Hero */
+        /* ── Scrollbar ──────────────────────────────────────────── */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0a1628; }
+        ::-webkit-scrollbar-thumb { background: #1A56DB; border-radius: 3px; }
+
+        /* ── Auth Guard ─────────────────────────────────────────── */
+        .auth-check { display: none; }
+
+        /* ── Navigation ─────────────────────────────────────────── */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 40px; height: 68px;
+            background: rgba(5, 12, 31, 0.6);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            transition: background 0.3s;
+        }
+        nav.scrolled { background: rgba(5,12,31,0.95); }
+
+        .nav-logo { display: flex; align-items: center; gap: 12px; }
+        .nav-icon {
+            width: 38px; height: 38px;
+            background: linear-gradient(135deg, #1A56DB 0%, #0EA5E9 100%);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 16px rgba(26,86,219,0.5);
+            position: relative; overflow: hidden;
+            flex-shrink: 0;
+        }
+        .nav-icon::after { content:''; position:absolute;inset:0; background:linear-gradient(135deg,rgba(255,255,255,0.2) 0%,transparent 60%); }
+        .nav-logo-text { font-size: 20px; font-weight: 800; letter-spacing: 2px; background: linear-gradient(135deg, #fff 0%, #93C5FD 100%); -webkit-background-clip: text; color: transparent; }
+
+        .nav-links { display: flex; gap: 32px; align-items: center; }
+        .nav-links a { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.6); transition: color 0.2s; }
+        .nav-links a:hover { color: white; }
+
+        .nav-cta { display: flex; gap: 12px; align-items: center; }
+        .btn-ghost { padding: 8px 18px; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.8); transition: all 0.2s; cursor: pointer; background: transparent; }
+        .btn-ghost:hover { border-color: rgba(255,255,255,0.4); color: white; }
+        .btn-primary { padding: 9px 22px; background: linear-gradient(135deg, #1A56DB 0%, #0EA5E9 100%); border: none; border-radius: 8px; font-size: 14px; font-weight: 700; color: white; cursor: pointer; box-shadow: 0 4px 16px rgba(26,86,219,0.4); transition: all 0.2s; }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(14,165,233,0.5); }
+
+        /* ── Hero ──────────────────────────────────────────────── */
         .hero {
-            padding: 80px 24px;
-            text-align: center;
-            max-width: 800px;
-            margin: 0 auto;
+            min-height: 100vh;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            position: relative; overflow: hidden;
+            padding: 100px 24px 60px;
+            background:
+                radial-gradient(ellipse at 20% 60%, rgba(26,86,219,0.18) 0%, transparent 55%),
+                radial-gradient(ellipse at 80% 30%, rgba(14,165,233,0.12) 0%, transparent 50%),
+                #050C1F;
         }
-        .hero h1 { font-size: 48px; font-weight: 700; margin-bottom: 24px; line-height: 1.2; }
-        .hero p { font-size: 18px; color: var(--text-muted); margin-bottom: 40px; }
-        .hero-ctas { display: flex; justify-content: center; gap: 16px; margin-bottom: 64px; }
-        .btn {
-            display: inline-block;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .btn-primary {
-            background-color: var(--primary);
-            color: white;
-            border: none;
-        }
-        .btn-primary:hover { background-color: var(--primary-hover); }
-        .btn-outline {
-            background-color: transparent;
-            color: var(--primary);
-            border: 2px solid var(--primary);
-        }
-        .btn-outline:hover { background-color: #EFF6FF; }
-        
-        /* Hero Visual */
-        .hero-visual { width: 100%; max-width: 600px; margin: 0 auto; }
-        .node { animation: pulse 2s infinite; transform-origin: center; }
-        @keyframes pulse { 0% { r: 6; opacity: 1; } 50% { r: 12; opacity: 0.5; } 100% { r: 6; opacity: 1; } }
 
-        /* Stats Bar */
+        /* Animated grid */
+        .hero-grid {
+            position: absolute; inset: 0; z-index: 0;
+            background-image: 
+                linear-gradient(rgba(26,86,219,0.06) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(26,86,219,0.06) 1px, transparent 1px);
+            background-size: 48px 48px;
+            mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+            animation: gridShift 20s linear infinite;
+        }
+        @keyframes gridShift { to { background-position: 48px 48px; } }
+
+        /* Animated network canvas */
+        .hero-canvas { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+
+        .hero-content { position: relative; z-index: 5; text-align: center; max-width: 820px; }
+
+        .hero-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 6px 16px; border-radius: 999px;
+            background: rgba(26,86,219,0.15); border: 1px solid rgba(26,86,219,0.3);
+            font-size: 12px; font-weight: 700; color: #93C5FD;
+            text-transform: uppercase; letter-spacing: 0.08em;
+            margin-bottom: 28px;
+        }
+        .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: #22C55E; animation: blink 2s ease-in-out infinite; }
+        @keyframes blink { 0%,100%{ opacity:1; } 50%{ opacity:0.3; } }
+
+        h1 {
+            font-size: clamp(42px, 7vw, 78px);
+            font-weight: 900; line-height: 1.08; letter-spacing: -2px;
+            margin-bottom: 24px;
+        }
+        h1 .line-1 { display: block; color: white; }
+        h1 .line-2 {
+            display: block;
+            background: linear-gradient(135deg, #1A56DB 0%, #0EA5E9 50%, #38BDF8 100%);
+            -webkit-background-clip: text; color: transparent;
+            animation: gradientShift 4s ease-in-out infinite;
+        }
+        @keyframes gradientShift {
+            0%,100% { background-position: 0% 50%; }
+            50%      { background-position: 100% 50%; }
+        }
+
+        .hero-sub {
+            font-size: clamp(16px, 2.5vw, 20px);
+            color: rgba(255,255,255,0.55); font-weight: 500; line-height: 1.6;
+            max-width: 600px; margin: 0 auto 40px;
+        }
+
+        .hero-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+        .btn-hero-main {
+            display: inline-flex; align-items: center; gap: 10px;
+            padding: 16px 32px; border-radius: 12px; border: none; cursor: pointer;
+            font-size: 16px; font-weight: 700; color: white;
+            background: linear-gradient(135deg, #1A56DB 0%, #0EA5E9 100%);
+            box-shadow: 0 8px 32px rgba(26,86,219,0.45);
+            transition: all 0.25s; position: relative; overflow: hidden;
+        }
+        .btn-hero-main::before { content:''; position:absolute;inset:0; background:linear-gradient(135deg,rgba(255,255,255,0.15) 0%,transparent 60%); opacity:0; transition:opacity 0.2s; }
+        .btn-hero-main:hover { transform:translateY(-3px); box-shadow: 0 12px 40px rgba(14,165,233,0.55); }
+        .btn-hero-main:hover::before { opacity:1; }
+        .btn-hero-sec {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 16px 28px; border-radius: 12px; cursor: pointer;
+            font-size: 16px; font-weight: 600; color: rgba(255,255,255,0.8);
+            background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+            transition: all 0.25s;
+        }
+        .btn-hero-sec:hover { background: rgba(255,255,255,0.10); border-color: rgba(255,255,255,0.25); color: white; }
+
+        /* Stats bar */
         .stats-bar {
-            background-color: var(--bg-light);
-            border-top: 1px solid var(--border);
-            border-bottom: 1px solid var(--border);
-            padding: 32px 24px;
-            display: flex;
-            justify-content: center;
-            gap: 48px;
-            flex-wrap: wrap;
+            display: flex; gap: 0; margin-top: 72px;
+            background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px; overflow: hidden;
+            max-width: 700px; width: 100%; align-self: center;
+            position: relative; z-index: 5;
         }
-        .stat-item {
-            text-align: center;
-            font-weight: 600;
-            color: var(--text-main);
-            font-size: 18px;
+        .stat {
+            flex: 1; padding: 24px 20px; text-align: center;
+            border-right: 1px solid rgba(255,255,255,0.06);
+            transition: background 0.2s;
         }
+        .stat:last-child { border-right: none; }
+        .stat:hover { background: rgba(26,86,219,0.08); }
+        .stat-num { font-size: 28px; font-weight: 800; color: white; line-height: 1; margin-bottom: 6px; }
+        .stat-lbl { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.06em; }
 
-        /* Features */
-        .features { padding: 80px 24px; max-width: 1000px; margin: 0 auto; }
-        .feature-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 32px;
+        /* Scroll indicator */
+        .scroll-ind {
+            position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%);
+            z-index: 5; display: flex; flex-direction: column; align-items: center; gap: 6px;
+            font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.3); letter-spacing: 0.1em;
         }
+        .scroll-arrow { animation: scrollBounce 2s ease-in-out infinite; }
+        @keyframes scrollBounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(6px)} }
+
+        /* ── Features Section ────────────────────────────────────── */
+        .section { padding: 100px 40px; }
+        .section-inner { max-width: 1120px; margin: 0 auto; }
+
+        .section-tag { display: inline-block; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #60A5FA; margin-bottom: 16px; }
+        .section-title { font-size: clamp(28px, 4vw, 44px); font-weight: 800; line-height: 1.15; color: white; margin-bottom: 16px; }
+        .section-sub { font-size: 18px; color: rgba(255,255,255,0.5); max-width: 560px; line-height: 1.65; margin-bottom: 56px; }
+
+        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2px; background: rgba(255,255,255,0.06); border-radius: 20px; overflow: hidden; }
         .feature-card {
-            padding: 24px;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            background: var(--bg);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            background: rgba(5,12,31,0.8); padding: 36px 32px;
+            display: flex; flex-direction: column; gap: 16px;
+            transition: background 0.25s;
         }
-        .feature-icon { width: 40px; height: 40px; color: var(--primary); margin-bottom: 16px; }
-        .feature-title { font-size: 20px; font-weight: 600; margin-bottom: 12px; }
-        .feature-body { color: var(--text-muted); font-size: 15px; }
+        .feature-card:hover { background: rgba(26,86,219,0.07); }
+        .fc-icon {
+            width: 52px; height: 52px; border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px;
+        }
+        .fc-title { font-size: 18px; font-weight: 700; color: white; }
+        .fc-desc { font-size: 14px; color: rgba(255,255,255,0.5); line-height: 1.65; }
 
-        /* Timeline */
-        .timeline { padding: 40px 24px 80px; max-width: 1000px; margin: 0 auto; text-align: center; }
-        .timeline h2 { margin-bottom: 40px; font-size: 32px; }
-        .steps {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            position: relative;
+        /* ── Architecture strip ───────────────────────────────────── */
+        .arch-section {
+            background: rgba(255,255,255,0.02); border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05);
         }
-        .steps::before {
-            content: ''; position: absolute; top: 16px; left: 0; right: 0; height: 2px;
-            background-color: var(--border); z-index: 1;
-        }
-        .step { position: relative; z-index: 2; flex: 1; padding: 0 16px; }
-        .step-num {
-            width: 34px; height: 34px; background: var(--bg); border: 2px solid var(--primary);
-            color: var(--primary); border-radius: 50%; display: flex; align-items: center;
-            justify-content: center; font-weight: 700; margin: 0 auto 16px;
-        }
-        .step-title { font-weight: 600; font-size: 16px; margin-bottom: 8px; }
-        .step-desc { font-size: 14px; color: var(--text-muted); }
+        .arch-row { display: grid; grid-template-columns: 1fr 1.2fr; gap: 80px; align-items: center; max-width: 1120px; margin: 0 auto; }
+        .arch-text .lead { font-size: 16px; color: rgba(255,255,255,0.5); line-height: 1.7; margin-bottom: 32px; }
+        .arch-bullets { display: flex; flex-direction: column; gap: 16px; }
+        .arch-bullet { display: flex; gap: 12px; align-items: flex-start; }
+        .ab-dot { width: 8px; height: 8px; border-radius: 50%; background: #1A56DB; margin-top: 6px; flex-shrink: 0; }
+        .ab-text { font-size: 15px; color: rgba(255,255,255,0.7); line-height: 1.5; }
+        .ab-text strong { color: white; }
 
-        /* Footer */
+        .arch-visual {
+            background: rgba(26,86,219,0.05); border: 1px solid rgba(26,86,219,0.15);
+            border-radius: 20px; padding: 32px; display: flex; flex-direction: column; gap: 12px;
+        }
+        .av-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: rgba(255,255,255,0.04); border-radius: 10px; font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.8); }
+        .av-badge { padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; margin-left: auto; }
+        .b-blue { background: rgba(26,86,219,0.25); color: #93C5FD; }
+        .b-green { background: rgba(5,150,105,0.2); color: #6EE7B7; }
+        .b-amber { background: rgba(217,119,6,0.2); color: #FCD34D; }
+        .b-purple { background: rgba(147,51,234,0.2); color: #D8B4FE; }
+
+        /* ── CTA Section ───────────────────────────────────────── */
+        .cta-section {
+            padding: 100px 40px; text-align: center;
+            background: radial-gradient(ellipse at center, rgba(26,86,219,0.15) 0%, transparent 70%);
+        }
+        .cta-section h2 { font-size: clamp(28px, 4.5vw, 52px); font-weight: 800; margin-bottom: 20px; }
+        .cta-section p { font-size: 18px; color: rgba(255,255,255,0.5); max-width: 480px; margin: 0 auto 40px; line-height: 1.6; }
+
+        /* ── Footer ────────────────────────────────────────────── */
         footer {
-            margin-top: auto;
-            border-top: 1px solid var(--border);
-            padding: 32px 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            max-width: 1000px;
-            margin: auto auto 0;
-            width: 100%;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            padding: 40px; 
+            display: flex; justify-content: space-between; align-items: center;
+            flex-wrap: wrap; gap: 16px; max-width: 1200px; margin: 0 auto;
         }
-        .footer-text { color: var(--text-muted); font-size: 14px; }
-        .footer-links { display: flex; gap: 16px; font-size: 14px; color: var(--text-muted); }
-        .footer-links a:hover { color: var(--primary); }
+        .footer-left { font-size: 13px; color: rgba(255,255,255,0.3); }
+        .footer-links { display: flex; gap: 24px; }
+        .footer-links a { font-size: 13px; color: rgba(255,255,255,0.4); transition: color 0.2s; }
+        .footer-links a:hover { color: rgba(255,255,255,0.8); }
+
+        /* ── User pill in nav ──────────────────────────────────── */
+        .user-pill {
+            display: flex; align-items: center; gap: 8px; padding: 6px 14px;
+            background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 999px; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.8);
+            cursor: pointer; transition: all 0.2s;
+        }
+        .user-pill:hover { background: rgba(255,255,255,0.10); }
+        .user-avatar { width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, #1A56DB, #0EA5E9); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; color: white; }
+
+        /* Animations */
+        .fade-up { opacity: 0; transform: translateY(24px); transition: opacity 0.7s ease, transform 0.7s ease; }
+        .fade-up.visible { opacity: 1; transform: none; }
 
         @media (max-width: 768px) {
-            .feature-grid { grid-template-columns: 1fr; }
-            .steps { flex-direction: column; gap: 32px; }
-            .steps::before { display: none; }
-            .hero h1 { font-size: 36px; }
-            .stats-bar { gap: 24px; flex-direction: column; }
+            nav { padding: 0 20px; }
+            .nav-links { display: none; }
+            .section { padding: 70px 20px; }
+            .arch-row { grid-template-columns: 1fr; gap: 40px; }
+            footer { flex-direction: column; text-align: center; }
+            .stats-bar { flex-direction: column; }
+            .stat { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.06); }
+            .stat:last-child { border-bottom: none; }
         }
     </style>
 </head>
 <body>
 
-    <header>
-        <a href="/static/index.html" class="logo">CGEE™</a>
-        <nav class="nav-links">
+    <!-- Auth guard -->
+    <script>
+        if(!localStorage.getItem('cgee_auth')) { window.location.href = '/static/login.html'; }
+    </script>
+
+    <!-- Navigation -->
+    <nav id="nav">
+        <a href="/static/index.html" class="nav-logo">
+            <div class="nav-icon">
+                <svg width="22" height="22" viewBox="0 0 42 42" fill="none" style="position:relative;z-index:1">
+                    <circle cx="7" cy="21" r="4" fill="white" opacity="0.95"/>
+                    <circle cx="35" cy="10" r="3.5" fill="white" opacity="0.95"/>
+                    <circle cx="35" cy="32" r="3.5" fill="#B3D9FF" opacity="0.9"/>
+                    <polyline points="7,21 14,15 21,21 28,13 35,10" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="21" y1="21" x2="35" y2="32" stroke="white" stroke-width="1.8" opacity="0.5"/>
+                </svg>
+            </div>
+            <span class="nav-logo-text">CGEE</span>
+        </a>
+        <div class="nav-links">
             <a href="/static/app.html">Predict</a>
-            <a href="/static/about.html">How It Works</a>
-            <a href="/static/docs.html">API Docs</a>
-        </nav>
-    </header>
+            <a href="/static/about.html">Architecture</a>
+            <a href="/static/docs.html">API</a>
+        </div>
+        <div class="nav-cta">
+            <div class="user-pill" id="user-pill">
+                <div class="user-avatar" id="user-avatar">D</div>
+                <span id="user-name">Demo User</span>
+            </div>
+            <button class="btn-primary" onclick="window.location='/static/app.html'">Open App</button>
+        </div>
+    </nav>
 
+    <!-- Hero -->
     <section class="hero">
-        <h1>Predict Your Journey Before You Drive</h1>
-        <p>CGEE™ combines real-time graph routing with machine learning to give you accurate travel time estimates across multiple future time horizons — 1 hour, 2 hours, and 4 hours ahead.</p>
-        <div class="hero-ctas">
-            <a href="/static/app.html" class="btn btn-primary">Try It Now</a>
-            <a href="/static/docs.html" class="btn btn-outline">View API Docs</a>
-        </div>
-        
-        <div class="hero-visual">
-            <svg viewBox="0 0 400 200" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-                <!-- Edges -->
-                <line x1="50" y1="100" x2="150" y2="50" stroke="#E5E7EB" stroke-width="4" />
-                <line x1="150" y1="50" x2="250" y2="100" stroke="#E5E7EB" stroke-width="4" />
-                <line x1="250" y1="100" x2="350" y2="50" stroke="#2563EB" stroke-width="4" stroke-dasharray="4" />
-                <line x1="50" y1="100" x2="150" y2="150" stroke="#E5E7EB" stroke-width="4" />
-                <line x1="150" y1="150" x2="250" y2="100" stroke="#E5E7EB" stroke-width="4" />
-                <line x1="150" y1="50" x2="150" y2="150" stroke="#E5E7EB" stroke-width="4" />
-                
-                <!-- Nodes -->
-                <circle cx="50" cy="100" r="6" fill="#111827" />
-                <circle cx="150" cy="50" r="6" fill="#111827" />
-                <circle cx="150" cy="150" r="6" fill="#111827" />
-                <circle cx="250" cy="100" r="6" fill="#111827" class="node" style="animation-delay: 0s" />
-                <circle cx="350" cy="50" r="6" fill="#2563EB" class="node" style="animation-delay: 1s" />
-            </svg>
-        </div>
-    </section>
+        <div class="hero-grid"></div>
+        <canvas class="hero-canvas" id="hero-canvas"></canvas>
 
-    <div class="stats-bar">
-        <div class="stat-item">3 Time Horizons</div>
-        <div class="stat-item">Segment-Level Precision</div>
-        <div class="stat-item">Bengaluru Road Network</div>
-    </div>
+        <div class="hero-content">
+            <div class="hero-badge fade-up visible">
+                <div class="badge-dot"></div>
+                Live Engine · Bengaluru Road Graph
+            </div>
 
-    <section class="features">
-        <div class="feature-grid">
-            <div class="feature-card">
-                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-                </svg>
-                <div class="feature-title">Segment-Level Routing</div>
-                <div class="feature-body">Routes are computed on Bengaluru's real road network using OpenStreetMap data. Each road segment is evaluated individually for maximum accuracy.</div>
+            <h1>
+                <span class="line-1 fade-up visible" style="transition-delay:.1s">Know Your ETA</span>
+                <span class="line-2 fade-up visible" style="transition-delay:.2s">Before You Drive</span>
+            </h1>
+
+            <p class="hero-sub fade-up visible" style="transition-delay:.3s">
+                Multi-horizon ML predictions using a live 154K-node Bengaluru road graph. 
+                Three XGBoost models. Contextual incident modulation. Real routes, real timing.
+            </p>
+
+            <div class="hero-actions fade-up visible" style="transition-delay:.4s">
+                <button class="btn-hero-main" onclick="window.location='/static/app.html'">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+                    Launch Trip Explorer
+                </button>
+                <button class="btn-hero-sec" onclick="window.location='/static/about.html'">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                    How it works
+                </button>
             </div>
-            <div class="feature-card">
-                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
-                </svg>
-                <div class="feature-title">1h · 2h · 4h Forecasts</div>
-                <div class="feature-body">Three independent XGBoost models predict traffic speed for each future window, so you can plan not just for now but for when you actually need to leave.</div>
+
+            <div class="stats-bar fade-up visible" style="transition-delay:.5s">
+                <div class="stat">
+                    <div class="stat-num" data-target="154563">0</div>
+                    <div class="stat-lbl">Graph Nodes</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-num" data-target="392530">0</div>
+                    <div class="stat-lbl">Road Edges</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-num">3</div>
+                    <div class="stat-lbl">XGBoost Models</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-num">3</div>
+                    <div class="stat-lbl">Route Options</div>
+                </div>
             </div>
-            <div class="feature-card">
-                <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line>
-                </svg>
-                <div class="feature-title">Incident-Aware ETA</div>
-                <div class="feature-body">Real-world incident probability varies by road type and time of day. When incidents are detected, the ETA adjusts using the contextual modulation mechanism.</div>
-            </div>
+        </div>
+
+        <div class="scroll-ind">
+            <span>Scroll</span>
+            <svg class="scroll-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
     </section>
 
-    <section class="timeline">
-        <h2>How It Works</h2>
-        <div class="steps">
-            <div class="step">
-                <div class="step-num">1</div>
-                <div class="step-title">Enter coordinates</div>
-                <div class="step-desc">User inputs source & destination</div>
-            </div>
-            <div class="step">
-                <div class="step-num">2</div>
-                <div class="step-title">Graph routes</div>
-                <div class="step-desc">Shortest path computed via OSMnx</div>
-            </div>
-            <div class="step">
-                <div class="step-num">3</div>
-                <div class="step-title">ML predicts speed</div>
-                <div class="step-desc">XGBoost models per segment per horizon</div>
-            </div>
-            <div class="step">
-                <div class="step-num">4</div>
-                <div class="step-title">ETA returned</div>
-                <div class="step-desc">Aggregated with confidence bands</div>
+    <!-- Features -->
+    <section class="section fade-up">
+        <div class="section-inner">
+            <span class="section-tag">Core Capabilities</span>
+            <h2 class="section-title">Built for real-world accuracy</h2>
+            <p class="section-sub">Each prediction is the result of graph routing, probabilistic incident modelling, and ML-driven speed forecasting across three time horizons.</p>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="fc-icon" style="background:rgba(26,86,219,0.15)">🗺️</div>
+                    <div class="fc-title">Live Road Graph</div>
+                    <div class="fc-desc">Built from OSMnx with 154K nodes and 392K edges. Routes are computed over the real Bengaluru network — not approximate straight-line distances.</div>
+                </div>
+                <div class="feature-card">
+                    <div class="fc-icon" style="background:rgba(14,165,233,0.12)">⚡</div>
+                    <div class="fc-title">Multi-Horizon Prediction</div>
+                    <div class="fc-desc">Three independently trained XGBoost models produce ETA estimates at 1-hour, 2-hour, and 4-hour lookahead windows with confidence bands.</div>
+                </div>
+                <div class="feature-card">
+                    <div class="fc-icon" style="background:rgba(5,150,105,0.12)">🛣️</div>
+                    <div class="fc-title">Three Route Types</div>
+                    <div class="fc-desc">Dijkstra + iterative edge-penalty generates the Fastest, Alternate, and Scenic routes for each query — all with independent ETA calculations.</div>
+                </div>
+                <div class="feature-card">
+                    <div class="fc-icon" style="background:rgba(147,51,234,0.12)">⚠️</div>
+                    <div class="fc-title">Contextual Incidents</div>
+                    <div class="fc-desc">A per-segment Beta(2,5) incident model with spatial propagation adjusts speed predictions — making the engine respond to live friction.</div>
+                </div>
+                <div class="feature-card">
+                    <div class="fc-icon" style="background:rgba(217,119,6,0.12)">📊</div>
+                    <div class="fc-title">Departure Intelligence</div>
+                    <div class="fc-desc">Smart departure chips compare current vs future ETAs using the correct model for each horizon, helping you choose the optimal departure time.</div>
+                </div>
+                <div class="feature-card">
+                    <div class="fc-icon" style="background:rgba(239,68,68,0.10)">🔌</div>
+                    <div class="fc-title">REST API</div>
+                    <div class="fc-desc">Every capability is accessible via a clean FastAPI-served JSON endpoint. Integrate CGEE's ML pipeline directly into your own applications.</div>
+                </div>
             </div>
         </div>
     </section>
 
+    <!-- Architecture strip -->
+    <section class="section arch-section fade-up">
+        <div class="arch-row">
+            <div class="arch-text">
+                <span class="section-tag">Engine Architecture</span>
+                <h2 class="section-title" style="max-width:380px">Prediction pipeline overview</h2>
+                <p class="lead">From a coordinate pair to a multi-route ETA response in under 3 seconds — here's what the engine does behind the scenes.</p>
+                <div class="arch-bullets">
+                    <div class="arch-bullet"><div class="ab-dot"></div><div class="ab-text"><strong>Graph snap</strong> — nearest OSM node found via k-d tree lookup</div></div>
+                    <div class="arch-bullet"><div class="ab-dot"></div><div class="ab-text"><strong>Dijkstra × 3</strong> — edge-penalty method produces three distinct routes</div></div>
+                    <div class="arch-bullet"><div class="ab-dot"></div><div class="ab-text"><strong>Incident simulation</strong> — Beta-distributed, road-class-aware per segment</div></div>
+                    <div class="arch-bullet"><div class="ab-dot"></div><div class="ab-text"><strong>XGBoost inference</strong> — per-segment speed prediction across three horizons</div></div>
+                    <div class="arch-bullet"><div class="ab-dot"></div><div class="ab-text"><strong>Contextual modulation</strong> — patent-filed adjustment for incident severity</div></div>
+                </div>
+            </div>
+            <div class="arch-visual">
+                <div class="av-row">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#93C5FD" stroke-width="2"><circle cx="12" cy="10" r="3"/><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/></svg>
+                    Coordinate Input
+                    <span class="av-badge b-blue">Input</span>
+                </div>
+                <div style="padding:0 16px;font-size:12px;color:rgba(255,255,255,0.2);text-align:center">↓</div>
+                <div class="av-row">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6EE7B7" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                    Graph Routing (k=3 paths)
+                    <span class="av-badge b-green">OSMnx</span>
+                </div>
+                <div style="padding:0 16px;font-size:12px;color:rgba(255,255,255,0.2);text-align:center">↓</div>
+                <div class="av-row">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FCD34D" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+                    Incident Modelling
+                    <span class="av-badge b-amber">Beta(2,5)</span>
+                </div>
+                <div style="padding:0 16px;font-size:12px;color:rgba(255,255,255,0.2);text-align:center">↓</div>
+                <div class="av-row">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D8B4FE" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    XGBoost Inference × 3
+                    <span class="av-badge b-purple">ML Core</span>
+                </div>
+                <div style="padding:0 16px;font-size:12px;color:rgba(255,255,255,0.2);text-align:center">↓</div>
+                <div class="av-row" style="background:rgba(26,86,219,0.12);border:1px solid rgba(26,86,219,0.2);">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#93C5FD" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                    ETA Response (JSON)
+                    <span class="av-badge b-blue">Output</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta-section fade-up">
+        <h2>Ready to predict your journey?</h2>
+        <p>Select any two locations in Bengaluru and get a multi-horizon ETA with route alternatives in seconds.</p>
+        <button class="btn-hero-main" onclick="window.location='/static/app.html'" style="margin:0 auto">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+            Open Trip Explorer
+        </button>
+    </section>
+
+    <!-- Footer -->
     <footer>
-        <div class="footer-text">&copy; 2026 Contextual Graph ETA Engine (CGEE™)</div>
+        <div class="footer-left">© 2026 CGEE — Contextual Graph ETA Engine · Manipal University Jaipur</div>
         <div class="footer-links">
-            <a href="/static/about.html">About</a>
+            <a href="/static/about.html">Architecture</a>
             <a href="/static/docs.html">API Docs</a>
-            <a href="#">GitHub</a>
+            <a href="/static/app.html">Predict</a>
         </div>
     </footer>
 
+    <script>
+        // Navbar scroll effect
+        const nav = document.getElementById('nav');
+        window.addEventListener('scroll', () => { nav.classList.toggle('scrolled', window.scrollY > 20); });
+
+        // User pill
+        const uname = localStorage.getItem('cgee_user') || 'Demo User';
+        document.getElementById('user-name').textContent = uname;
+        document.getElementById('user-avatar').textContent = uname.charAt(0).toUpperCase();
+        document.getElementById('user-pill').addEventListener('click', () => {
+            if(confirm('Sign out of CGEE?')) { localStorage.removeItem('cgee_auth'); localStorage.removeItem('cgee_user'); window.location.href = '/static/login.html'; }
+        });
+
+        // Animated canvas — node graph
+        const canvas = document.getElementById('hero-canvas');
+        const ctx = canvas.getContext('2d');
+        let W, H, nodes;
+
+        function resize() {
+            W = canvas.width  = canvas.offsetWidth;
+            H = canvas.height = canvas.offsetHeight;
+            initNodes();
+        }
+
+        function initNodes() {
+            nodes = Array.from({length: 55}, () => ({
+                x: Math.random() * W, y: Math.random() * H,
+                vx: (Math.random()-0.5)*0.3, vy: (Math.random()-0.5)*0.3,
+                r: 1.5 + Math.random() * 2.5,
+                alpha: 0.3 + Math.random() * 0.5
+            }));
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, W, H);
+            nodes.forEach(n => {
+                n.x += n.vx; n.y += n.vy;
+                if(n.x < 0 || n.x > W) n.vx *= -1;
+                if(n.y < 0 || n.y > H) n.vy *= -1;
+            });
+            // Draw edges
+            for(let i = 0; i < nodes.length; i++) {
+                for(let j = i+1; j < nodes.length; j++) {
+                    const dx = nodes[i].x - nodes[j].x;
+                    const dy = nodes[i].y - nodes[j].y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    if(dist < 140) {
+                        ctx.beginPath();
+                        ctx.strokeStyle = `rgba(26,86,219,${0.08 * (1 - dist/140)})`;
+                        ctx.lineWidth = 1;
+                        ctx.moveTo(nodes[i].x, nodes[i].y);
+                        ctx.lineTo(nodes[j].x, nodes[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            // Draw nodes
+            nodes.forEach(n => {
+                ctx.beginPath();
+                ctx.arc(n.x, n.y, n.r, 0, Math.PI*2);
+                ctx.fillStyle = `rgba(26,86,219,${n.alpha * 0.6})`;
+                ctx.fill();
+            });
+            requestAnimationFrame(animate);
+        }
+
+        window.addEventListener('resize', resize);
+        resize(); animate();
+
+        // Counter animation
+        function animateCounter(el, target) {
+            const duration = 2000;
+            const start = performance.now();
+            const fmt = n => n >= 1000 ? (n/1000).toFixed(0)+'K' : n;
+            function step(ts) {
+                const p = Math.min((ts - start)/duration, 1);
+                const ease = 1 - Math.pow(1-p, 3);
+                el.textContent = fmt(Math.round(target * ease));
+                if(p < 1) requestAnimationFrame(step);
+            }
+            requestAnimationFrame(step);
+        }
+
+        const io = new IntersectionObserver(entries => {
+            entries.forEach(e => {
+                if(e.isIntersecting) {
+                    e.target.classList.add('visible');
+                    // Counter
+                    e.target.querySelectorAll('[data-target]').forEach(el => {
+                        animateCounter(el, +el.dataset.target);
+                    });
+                }
+            });
+        }, {threshold: 0.15});
+
+        document.querySelectorAll('.fade-up').forEach(el => io.observe(el));
+        // Trigger stats immediately since they're in view
+        setTimeout(() => {
+            document.querySelectorAll('[data-target]').forEach(el => animateCounter(el, +el.dataset.target));
+        }, 600);
+    </script>
 </body>
 </html>

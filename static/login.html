@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CGEE — Sign In</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        :root {
+            --primary: #1A56DB;
+            --accent:  #0EA5E9;
+            --success: #059669;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #050C1F;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* ── Animated deep-space background ───────────────────── */
+        .bg {
+            position: fixed; inset: 0; z-index: 0;
+            background: radial-gradient(ellipse at 20% 50%, #0d1f4d 0%, transparent 60%),
+                        radial-gradient(ellipse at 80% 20%, #0a2a5e 0%, transparent 50%),
+                        radial-gradient(ellipse at 60% 80%, #061535 0%, transparent 50%),
+                        #050C1F;
+        }
+
+        /* Floating nodes */
+        .nodes { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+        .node {
+            position: absolute;
+            border-radius: 50%;
+            background: var(--primary);
+            opacity: 0;
+            animation: nodeFloat linear infinite;
+        }
+        @keyframes nodeFloat {
+            0%   { opacity: 0; transform: translateY(0) scale(0); }
+            10%  { opacity: 0.6; transform: translateY(-10px) scale(1); }
+            90%  { opacity: 0.4; }
+            100% { opacity: 0; transform: translateY(-120px) scale(0.5); }
+        }
+
+        /* SVG network lines */
+        .network-svg {
+            position: fixed; inset: 0; width: 100%; height: 100%;
+            z-index: 1; pointer-events: none; opacity: 0.12;
+        }
+        .net-line { stroke: #1A56DB; stroke-width: 1; fill: none; stroke-dasharray: 400; stroke-dashoffset: 400; animation: drawNet 3s ease forwards; }
+        @keyframes drawNet { to { stroke-dashoffset: 0; } }
+
+        /* Orbiting ring */
+        .ring {
+            position: fixed;
+            border-radius: 50%;
+            border: 1px solid rgba(26,86,219,0.15);
+            animation: spin linear infinite;
+        }
+        @keyframes spin { to { transform: translate(-50%,-50%) rotate(360deg); } }
+
+        /* ── Login card ───────────────────────────────────────── */
+        .card {
+            position: relative; z-index: 10;
+            background: rgba(255,255,255,0.04);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255,255,255,0.10);
+            border-radius: 24px;
+            padding: 48px 40px 40px;
+            width: 100%; max-width: 420px;
+            box-shadow: 0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(26,86,219,0.12);
+            animation: cardIn 0.7s cubic-bezier(0.16,1,0.3,1) forwards;
+        }
+        @keyframes cardIn { from { opacity:0; transform:translateY(32px); } to { opacity:1; transform:none; } }
+
+        /* Logo mark */
+        .logo-wrap {
+            display: flex; flex-direction: column; align-items: center; margin-bottom: 36px;
+        }
+        .logo-icon {
+            width: 72px; height: 72px;
+            background: linear-gradient(135deg, #1A56DB 0%, #0EA5E9 100%);
+            border-radius: 20px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 8px 32px rgba(26,86,219,0.5), 0 0 0 1px rgba(255,255,255,0.1);
+            margin-bottom: 16px;
+            position: relative; overflow: hidden;
+            animation: iconPulse 3s ease-in-out infinite;
+        }
+        @keyframes iconPulse {
+            0%,100% { box-shadow: 0 8px 32px rgba(26,86,219,0.5), 0 0 0 1px rgba(255,255,255,0.1); }
+            50%      { box-shadow: 0 8px 48px rgba(14,165,233,0.7), 0 0 0 1px rgba(255,255,255,0.15); }
+        }
+        .logo-icon::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 60%);
+        }
+        .logo-name {
+            font-size: 28px; font-weight: 800; letter-spacing: 2px;
+            background: linear-gradient(135deg, #fff 0%, #93C5FD 100%);
+            -webkit-background-clip: text; color: transparent;
+        }
+        .logo-sub { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.4); margin-top: 4px; letter-spacing: 0.08em; text-transform: uppercase; }
+
+        /* Form */
+        .form-title { font-size: 22px; font-weight: 700; color: white; margin-bottom: 6px; }
+        .form-sub { font-size: 14px; color: rgba(255,255,255,0.5); margin-bottom: 32px; }
+
+        .input-group { margin-bottom: 18px; }
+        .input-group label { display: block; font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+        .input-group input {
+            width: 100%; padding: 14px 16px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.10);
+            border-radius: 10px;
+            color: white; font-size: 15px; font-family: inherit;
+            outline: none; transition: all 0.2s;
+        }
+        .input-group input::placeholder { color: rgba(255,255,255,0.25); }
+        .input-group input:focus { border-color: rgba(26,86,219,0.8); background: rgba(26,86,219,0.08); box-shadow: 0 0 0 3px rgba(26,86,219,0.2); }
+
+        .btn-login {
+            width: 100%; height: 52px; border: none; border-radius: 12px; cursor: pointer;
+            font-size: 16px; font-weight: 700; color: white; letter-spacing: 0.02em;
+            background: linear-gradient(135deg, #1A56DB 0%, #0EA5E9 100%);
+            box-shadow: 0 4px 20px rgba(26,86,219,0.4);
+            transition: all 0.2s; margin-top: 8px; position: relative; overflow: hidden;
+        }
+        .btn-login::before {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
+            opacity: 0; transition: opacity 0.2s;
+        }
+        .btn-login:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(14,165,233,0.5); }
+        .btn-login:hover::before { opacity: 1; }
+        .btn-login:active { transform: translateY(0); }
+        .btn-login:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .btn-login .spinner { display: none; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin2 0.8s linear infinite; margin: 0 auto; }
+        @keyframes spin2 { to { transform: rotate(360deg); } }
+
+        .demo-box {
+            margin-top: 24px; padding: 14px 16px;
+            background: rgba(5, 150, 105, 0.08);
+            border: 1px solid rgba(5,150,105,0.2);
+            border-radius: 10px;
+        }
+        .demo-box p { font-size: 12px; font-weight: 600; color: rgba(5,200,120,0.9); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+        .demo-cred { font-size: 13px; color: rgba(255,255,255,0.7); font-family: monospace; }
+        .demo-cred span { color: #6EE7B7; font-weight: 600; }
+
+        .error-msg { margin-top: 14px; padding: 12px 14px; background: rgba(220,38,38,0.1); border: 1px solid rgba(220,38,38,0.2); border-radius: 8px; color: #FCA5A5; font-size: 13px; font-weight: 500; display: none; }
+
+        @media (max-width: 480px) { .card { padding: 36px 24px; margin: 0 16px; } }
+    </style>
+</head>
+<body>
+
+    <div class="bg"></div>
+
+    <!-- Animated nodes -->
+    <div class="nodes" id="nodes-container"></div>
+
+    <!-- Ring decorations -->
+    <div class="ring" style="width:600px;height:600px;top:50%;left:50%;transform:translate(-50%,-50%);animation-duration:40s;"></div>
+    <div class="ring" style="width:900px;height:900px;top:50%;left:50%;transform:translate(-50%,-50%);animation-duration:60s;animation-direction:reverse;"></div>
+
+    <!-- Network SVG -->
+    <svg class="network-svg" viewBox="0 0 1440 800" preserveAspectRatio="xMidYMid slice">
+        <line class="net-line" x1="100" y1="200" x2="400" y2="350" style="animation-delay:.2s"/>
+        <line class="net-line" x1="400" y1="350" x2="700" y2="180" style="animation-delay:.4s"/>
+        <line class="net-line" x1="700" y1="180" x2="1100" y2="400" style="animation-delay:.6s"/>
+        <line class="net-line" x1="1100" y1="400" x2="1350" y2="220" style="animation-delay:.8s"/>
+        <line class="net-line" x1="200" y1="600" x2="500" y2="450" style="animation-delay:1s"/>
+        <line class="net-line" x1="500" y1="450" x2="850" y2="600" style="animation-delay:1.2s"/>
+        <line class="net-line" x1="850" y1="600" x2="1200" y2="500" style="animation-delay:1.4s"/>
+        <circle cx="100" cy="200" r="4" fill="#1A56DB" opacity="0.8" style="animation: nodeFloat 4s 1.5s infinite"/>
+        <circle cx="400" cy="350" r="6" fill="#0EA5E9" opacity="0.6"/>
+        <circle cx="700" cy="180" r="4" fill="#1A56DB" opacity="0.8"/>
+        <circle cx="1100" cy="400" r="5" fill="#0EA5E9" opacity="0.6"/>
+        <circle cx="500" cy="450" r="4" fill="#1A56DB" opacity="0.8"/>
+    </svg>
+
+    <div class="card">
+        <div class="logo-wrap">
+            <div class="logo-icon">
+                <svg width="42" height="42" viewBox="0 0 42 42" fill="none" style="position:relative;z-index:1">
+                    <circle cx="7" cy="21" r="4" fill="white" opacity="0.95"/>
+                    <circle cx="35" cy="10" r="3.5" fill="white" opacity="0.95"/>
+                    <circle cx="35" cy="32" r="3.5" fill="#B3D9FF" opacity="0.9"/>
+                    <circle cx="21" cy="21" r="3" fill="white" opacity="0.7"/>
+                    <line x1="7" y1="21" x2="21" y2="21" stroke="white" stroke-width="1.8" opacity="0.6"/>
+                    <line x1="21" y1="21" x2="35" y2="10" stroke="white" stroke-width="1.8" opacity="0.6"/>
+                    <line x1="21" y1="21" x2="35" y2="32" stroke="white" stroke-width="1.8" opacity="0.6"/>
+                    <polyline points="7,21 14,15 21,21 28,13 35,10" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="logo-name">CGEE</div>
+            <div class="logo-sub">Contextual Graph ETA Engine</div>
+        </div>
+
+        <div class="form-title">Welcome back</div>
+        <div class="form-sub">Sign in to access the Trip Explorer</div>
+
+        <form onsubmit="handleLogin(event)">
+            <div class="input-group">
+                <label>Email Address</label>
+                <input type="email" id="email" placeholder="demo@cgee.ai" autocomplete="email" required>
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" required>
+            </div>
+            <button type="submit" class="btn-login" id="login-btn">
+                <span id="btn-label">Sign In</span>
+                <div class="spinner" id="btn-spinner"></div>
+            </button>
+        </form>
+
+        <div class="demo-box">
+            <p>Demo Credentials</p>
+            <div class="demo-cred">Email: <span>demo@cgee.ai</span></div>
+            <div class="demo-cred">Password: <span>demo123</span></div>
+        </div>
+
+        <div class="error-msg" id="error-msg">Invalid credentials. Use the demo credentials above.</div>
+    </div>
+
+    <script>
+        // Spawn floating nodes
+        const c = document.getElementById('nodes-container');
+        for(let i = 0; i < 24; i++) {
+            const d = document.createElement('div');
+            d.className = 'node';
+            const s = 3 + Math.random() * 5;
+            d.style.cssText = `width:${s}px;height:${s}px;left:${Math.random()*100}%;bottom:${Math.random()*60}%;animation-duration:${6+Math.random()*10}s;animation-delay:${Math.random()*8}s;opacity:0`;
+            c.appendChild(d);
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const email    = document.getElementById('email').value.trim().toLowerCase();
+            const password = document.getElementById('password').value;
+            const btn      = document.getElementById('login-btn');
+            const spinner  = document.getElementById('btn-spinner');
+            const label    = document.getElementById('btn-label');
+            const errBox   = document.getElementById('error-msg');
+
+            btn.disabled = true;
+            label.style.display = 'none';
+            spinner.style.display = 'block';
+            errBox.style.display  = 'none';
+
+            // Simulate auth delay for UX polish
+            await new Promise(r => setTimeout(r, 800));
+
+            if(email === 'demo@cgee.ai' && password === 'demo123') {
+                localStorage.setItem('cgee_auth', '1');
+                localStorage.setItem('cgee_user', 'Demo User');
+                window.location.href = '/static/index.html';
+            } else {
+                errBox.style.display = 'block';
+                btn.disabled = false;
+                label.style.display = 'block';
+                spinner.style.display = 'none';
+            }
+        }
+
+        // If already logged in, skip login
+        if(localStorage.getItem('cgee_auth')) {
+            window.location.href = '/static/index.html';
+        }
+    </script>
+</body>
+</html>

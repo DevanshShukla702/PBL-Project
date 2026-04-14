@@ -49,7 +49,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Contextual Graph ETA Engine (CGEE™)",
+    title="Contextual Graph ETA Engine (CGEE)",
     description="Context-aware multi-horizon graph-based ETA prediction engine",
     version="1.0.0",
     lifespan=lifespan,
@@ -135,18 +135,6 @@ async def value_error_handler(request: Request, exc: ValueError):
 
 # ----- Routes -----
 
-@app.get("/", response_class=HTMLResponse)
-def serve_frontend():
-    try:
-        with open("static/index.html") as f:
-            return HTMLResponse(content=f.read())
-    except FileNotFoundError:
-        return JSONResponse(
-            content={
-                "status": "ok" if is_engine_ready() else "initializing",
-                "engine_ready": is_engine_ready(),
-            }
-        )
 
 
 @app.get("/health")
@@ -210,3 +198,13 @@ def predict_route_eta(req: RouteRequest):
 # Mount AFTER all routes. Create the directory if it doesn't exist.
 os.makedirs("static", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Serve React application securely
+import os
+os.makedirs("static/app-react", exist_ok=True)
+app.mount("/app", StaticFiles(directory="static/app-react", html=True), name="react-app")
+from fastapi.responses import FileResponse
+
+@app.get("/", summary="Landing Page")
+async def root():
+    return FileResponse("static/login.html")

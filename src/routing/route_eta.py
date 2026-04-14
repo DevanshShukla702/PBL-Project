@@ -38,6 +38,8 @@ def initialize_engine():
             _engine_ready = True
             _init_error = None
             logger.info("Engine fully ready.")
+            # Pre-build edge weight cache immediately after graph load
+            _build_weight_cache()
         except FileNotFoundError as e:
             _init_error = (
                 f"Missing required file: {e}. "
@@ -148,46 +150,78 @@ LOAD_FACTORS = {
 
 
 # ---------------------------------------------------
-# K-Shortest Paths via Edge Penalty Method
+# K-Shortest Paths via Edge Penalty Method (OPTIMISED)
 # ---------------------------------------------------
+# Pre-built weight cache — avoids Python callback overhead on 392K+ edges.
+_WEIGHT_CACHE: dict = {}
+_WEIGHT_CACHE_VALID = False
+
+
+def _build_weight_cache():
+    """Build a {(u,v): length} numeric dict once from the loaded graph.
+    Rebuilding is O(E) but done only once at startup.
+    """
+    global _WEIGHT_CACHE, _WEIGHT_CACHE_VALID
+    _WEIGHT_CACHE.clear()
+    for u, v, data in GRAPH.edges(data=True):
+        raw = data.get("length", 100)
+        length = raw[0] if isinstance(raw, list) else raw
+        _WEIGHT_CACHE[(u, v)] = float(length)
+    _WEIGHT_CACHE_VALID = True
+    logger.info(f"Weight cache built: {len(_WEIGHT_CACHE)} edges")
+
+
 def find_k_routes(orig, dest, k=1, penalty=5.0):
     """
     Generate up to k distinct routes using iterative edge penalty.
-    Maintains a dictionary of edge penalties to dynamically calculate
-    weights without copying the graph (which causes OOM crashes).
+    Uses a pre-built numeric weight dict instead of a Python callback,
+    eliminating per-edge Python overhead on every Dijkstra call.
     """
     if not _engine_ready:
         raise RuntimeError("Engine not initialized. Call initialize_engine() first.")
+
+    # Build weight cache on first call (once per server lifetime)
+    global _WEIGHT_CACHE_VALID
+    if not _WEIGHT_CACHE_VALID:
+        _build_weight_cache()
+
     routes = []
-    edge_penalties = {}
-
-    def dynamic_weight(u, v, d):
-        edge_data = d[0] if 0 in d else d
-        base_length = edge_data.get("length", 100)
-        if isinstance(base_length, list):
-            base_length = base_length[0]
-
-        # Apply accumulated penalty for this specific edge
-        mult = edge_penalties.get((u, v), 1.0)
-        return float(base_length) * float(mult)
+    # Working copy of penalties — only penalised edges differ from base
+    penalties: dict[tuple, float] = {}
 
     for i in range(k):
         try:
-            path = nx.shortest_path(GRAPH, orig, dest, weight=dynamic_weight)
+            if i == 0 and not penalties:
+                # PERF: First route has no penalties — use the native string-key
+                # weight so NetworkX reads edge attrs directly (C-level, no
+                # Python callbacks on 392K edges).
+                path = nx.shortest_path(GRAPH, orig, dest, weight="length")
+            else:
+                # Subsequent routes: must honour per-edge penalties via closure.
+                # Closure is minimal: 2 dict lookups, no isinstance checks.
+                _pen = penalties
+                _base = _WEIGHT_CACHE
+
+                def _w(u, v, _d, _p=_pen, _b=_base):
+                    base = _b.get((u, v), 100.0)
+                    mult = _p.get((u, v), 1.0)
+                    return base * mult
+
+                path = nx.shortest_path(GRAPH, orig, dest, weight=_w)
+
             if not path:
                 break
 
-            # Skip if this path is identical to an existing one
-            if any(path == existing for existing in routes):
+            # Skip exact duplicates
+            if any(path == ex for ex in routes):
                 break
 
             routes.append(path)
 
-            # Penalize edges in this path to force genuinely different alternatives
+            # Penalise edges of found path to force diversity next iteration
             for u, v in zip(path[:-1], path[1:]):
-                current_mult = edge_penalties.get((u, v), 1.0)
-                edge_penalties[(u, v)] = current_mult * penalty
-                
+                penalties[(u, v)] = penalties.get((u, v), 1.0) * penalty
+
         except (nx.NetworkXNoPath, nx.NodeNotFound):
             break
 
@@ -411,11 +445,29 @@ def compute_route_eta(source: dict, destination: dict, departure_time=None):
 
     # Process each route
     results = []
+    # Actual user-selected coordinates (may differ from nearest graph node)
+    src_coord = {"lat": source["lat"], "lon": source["lon"]}
+    dst_coord = {"lat": destination["lat"], "lon": destination["lon"]}
+
     for i, route_nodes in enumerate(all_routes):
         route_geometry, segments, road_types = extract_route_info(route_nodes)
 
         if len(segments) == 0:
             continue
+
+        # --- FIX: Stitch actual source/dest pin coordinates into geometry ---
+        # The graph path starts/ends at the *nearest node*, which can be
+        # dozens of metres away from the user's selected pin.  Prepending the
+        # real source and appending the real destination closes the visual gap
+        # on the map without altering any ETA or distance computation.
+        if route_geometry:
+            first = route_geometry[0]
+            last  = route_geometry[-1]
+            # Only stitch if the actual coord differs measurably from the node
+            if abs(first["lat"] - src_coord["lat"]) > 1e-5 or abs(first["lon"] - src_coord["lon"]) > 1e-5:
+                route_geometry = [src_coord] + route_geometry
+            if abs(last["lat"] - dst_coord["lat"]) > 1e-5 or abs(last["lon"] - dst_coord["lon"]) > 1e-5:
+                route_geometry = route_geometry + [dst_coord]
 
         total_distance = sum(segments)
 

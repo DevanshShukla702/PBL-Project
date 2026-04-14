@@ -3,133 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CGEE™ | API Reference</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <meta name="description" content="CGEE API Documentation — Contextual Graph ETA Engine REST API reference.">
+    <title>CGEE | API Reference</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #2563EB;
-            --primary-hover: #1D4ED8;
-            --bg: #ffffff;
-            --text-main: #111827;
-            --text-muted: #4B5563;
-            --border: #E5E7EB;
-            --bg-code: #F3F4F6;
-            --bg-light: #F9FAFB;
+            --primary: #1A56DB;
+            --primary-light: #EBF2FF;
+            --bg-base: #FFFFFF;
+            --bg-surface: #F8FAFC;
+            --text-primary: #0F172A;
+            --text-secondary: #475569;
+            --border: #E2E8F0;
+            --code-bg: #1E293B;
+            --code-text: #E2E8F0;
+            --shadow-sm: 0 1px 3px rgba(15,23,42,0.08);
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Inter', sans-serif;
-            color: var(--text-main);
-            background-color: var(--bg);
-            line-height: 1.6;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-        }
-        a { text-decoration: none; color: inherit; }
+
+        body { font-family: 'Inter', sans-serif; color: var(--text-secondary); background: var(--bg-surface); line-height: 1.6; margin: 0; }
+        a { text-decoration: none; color: inherit; transition: all 0.2s; }
+        h1, h2, h3 { color: var(--text-primary); margin-top: 0; }
         
-        /* Navigation */
-        header {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 16px 24px; border-bottom: 1px solid var(--border);
-            background-color: var(--bg); position: sticky; top: 0; z-index: 100;
-        }
-        .logo { font-weight: 700; font-size: 20px; color: var(--primary); }
-        .nav-links { display: flex; gap: 24px; }
-        .nav-links a { font-weight: 500; color: var(--text-muted); transition: color 0.2s; padding-bottom: 2px; }
-        .nav-links a:hover { color: var(--text-main); }
+        header { position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center; padding: 16px 32px; background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(226,232,240,0.8); }
+        .logo { font-weight: 800; font-size: 20px; color: var(--primary); }
+        .nav-links { display: flex; gap: 32px; }
+        .nav-links a { font-weight: 600; color: var(--text-secondary); position: relative; padding-bottom: 2px; }
+        .nav-links a:hover { color: var(--text-primary); }
         .nav-links a.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
 
-        /* Container */
-        .container { max-width: 800px; margin: 0 auto; padding: 60px 24px; width: 100%; }
-
-        /* Hero */
-        .hero { margin-bottom: 40px; }
-        .hero h1 { font-size: 36px; margin-bottom: 12px; }
-        .hero p { font-size: 18px; color: var(--text-muted); }
-
-        /* Base URL */
-        .base-url-card {
-            background: var(--bg-light); border: 1px solid var(--border); border-radius: 8px; padding: 16px;
-            display: flex; justify-content: space-between; align-items: center; margin-bottom: 48px;
-        }
-        .base-url { font-family: monospace; font-size: 16px; font-weight: 600; color: var(--primary); }
-        .base-url-note { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
-        .btn-copy { background: white; border: 1px solid var(--border); border-radius: 4px; padding: 6px 12px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
-        .btn-copy:hover { border-color: var(--primary); color: var(--primary); }
-
-        /* Endpoints */
-        .endpoint { margin-bottom: 56px; padding-bottom: 40px; border-bottom: 1px solid var(--border); }
-        .endpoint:last-of-type { border-bottom: none; margin-bottom: 32px; padding-bottom: 0; }
+        .container { max-width: 900px; margin: 0 auto; padding: 64px 24px; }
         
-        .method-badge {
-            display: inline-block; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 13px; margin-right: 12px;
-        }
-        .method-get { background-color: #E0F2FE; color: #0284C7; }
-        .method-post { background-color: #DCFCE7; color: #16A34A; }
+        .hero { text-align: center; margin-bottom: 64px; }
+        .pill-badge { display: inline-flex; background: var(--primary-light); color: var(--primary); padding: 4px 12px; border-radius: 999px; font-weight: 700; font-size: 12px; border: 1px solid #BFDBFE; margin-bottom: 16px; }
+        .hero h1 { font-size: 40px; font-weight: 800; margin-bottom: 16px; }
         
-        .endpoint-title { font-family: monospace; font-size: 18px; font-weight: 600; display: flex; align-items: center; margin-bottom: 12px; }
-        .endpoint-desc { color: var(--text-muted); font-size: 15px; margin-bottom: 16px; }
-
-        .code-block {
-            background-color: var(--bg-code);
-            border-radius: 8px; padding: 16px; overflow-x: auto;
-            font-family: monospace; font-size: 14px; color: #1F2937;
-            margin-bottom: 16px; border: 1px solid var(--border);
-        }
-        .code-label { font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; letter-spacing: 0.5px; }
-
-        .error-list { font-size: 14px; color: var(--text-muted); margin-top: 12px; }
-
-        /* Try it Live */
-        .try-it-section {
-            background-color: white; border: 1px solid var(--primary);
-            border-radius: 12px; padding: 32px; margin-top: 24px;
-            box-shadow: 0 4px 6px -1px rgba(37,99,235,0.1);
-        }
-        .try-title { font-size: 20px; font-weight: 600; margin-bottom: 24px; color: var(--primary); }
+        .base-url { display: inline-flex; align-items: center; gap: 12px; background: white; padding: 12px 24px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--text-primary); }
+        .base-url button { background: none; border: none; cursor: pointer; color: var(--primary); font-weight: 600; display: flex; align-items: center; gap: 4px; }
         
-        .inputs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
-        .input-group { display: flex; flex-direction: column; gap: 6px; }
-        label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
-        input { padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; }
-        input:focus { outline: none; border-color: var(--primary); }
+        .endpoint-card { background: white; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 16px; overflow: hidden; box-shadow: var(--shadow-sm); }
+        .ep-header { padding: 16px 24px; display: flex; align-items: center; cursor: pointer; user-select: none; }
+        .ep-header:hover { background: var(--bg-surface); }
+        .ep-badge { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; margin-right: 16px; }
+        .badge-post { background: #DCFCE7; color: #166534; border: 1px solid #BBF7D0; }
+        .badge-get { background: #DBEAFE; color: #1D4ED8; border: 1px solid #BFDBFE; }
+        .ep-path { font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 600; color: var(--text-primary); flex-grow: 1; }
+        .ep-desc { font-size: 14px; color: var(--text-secondary); margin-right: 16px; }
+        .ep-chevron { transition: transform 0.2s; color: var(--text-muted); }
+
+        .ep-body { padding: 24px; border-top: 1px solid var(--border); display: none; }
+        .endpoint-card.active .ep-body { display: block; }
+        .endpoint-card.active { border-left: 4px solid var(--primary); }
+        .endpoint-card.active .ep-chevron { transform: rotate(180deg); }
         
-        .btn-live {
-            background: var(--primary); color: white; border: none; padding: 12px 24px;
-            border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s;
-        }
-        .btn-live:hover { background: var(--primary-hover); }
+        .ep-body p { margin-top: 0; margin-bottom: 24px; }
         
-        #live-response { display: none; margin-top: 24px; }
+        .code-block { position: relative; background: var(--code-bg); color: var(--code-text); padding: 20px; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 13px; overflow-x: auto; margin-bottom: 24px; }
+        .code-lang { position: absolute; top: 12px; right: 12px; font-size: 11px; color: #94A3B8; text-transform: uppercase; font-weight: 600; letter-spacing: 1px; }
+        .code-copy { position: absolute; bottom: 12px; right: 12px; background: rgba(255,255,255,0.1); border: none; color: white; padding: 4px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; transition: background 0.2s; }
+        .code-copy:hover { background: rgba(255,255,255,0.2); }
+        
+        .json-key { color: #93C5FD; }
+        .json-str { color: #A7F3D0; }
+        .json-num { color: #FCD34D; }
 
-        /* Validation Box */
-        .validation-box {
-            background: #FEF2F2; border: 1px solid #FECACA; padding: 16px; border-radius: 8px;
-            color: #991B1B; font-size: 14px; margin-bottom: 48px;
-        }
-        .validation-title { font-weight: 600; margin-bottom: 4px; }
+        .tester-section { margin-top: 64px; background: white; border: 1px solid var(--border); border-radius: 16px; padding: 32px; box-shadow: var(--shadow-sm); }
+        .tester-section h2 { margin-bottom: 24px; display: flex; align-items: center; gap: 8px;}
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+        .input-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-primary); }
+        .input-group input { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 14px; background: var(--bg-surface); outline: none; }
+        .input-group input:focus { border-color: var(--primary); background: white; }
+        
+        .btn-exec { background: linear-gradient(135deg, var(--primary), #1039A0); color: white; border: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; cursor: pointer; width: 100%; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform 0.2s;}
+        .btn-exec:hover { transform: translateY(-2px); }
 
-        /* Footer */
-        footer {
-            margin-top: auto; border-top: 1px solid var(--border); padding: 32px 24px;
-            display: flex; justify-content: space-between; align-items: center;
-            max-width: 1000px; margin: auto auto 0; width: 100%;
-        }
-        .footer-text { color: var(--text-muted); font-size: 14px; }
-        .footer-links { display: flex; gap: 16px; font-size: 14px; color: var(--text-muted); }
-        .footer-links a:hover { color: var(--primary); }
+        #test-res-container { margin-top: 24px; display: none; }
+        .res-status { display: inline-flex; background: #DCFCE7; color: #166534; padding: 4px 12px; border-radius: 6px; font-weight: 700; font-size: 13px; margin-bottom: 12px; }
+        .res-status.err { background: #FEE2E2; color: #991B1B; }
 
-        @media (max-width: 600px) {
-            .inputs-grid { grid-template-columns: 1fr; }
-            .base-url-card { flex-direction: column; align-items: flex-start; gap: 12px; }
-        }
     </style>
 </head>
 <body>
+    <script>if(!localStorage.getItem('cgee_auth')){window.location.href='/static/login.html';}</script>
 
     <header>
-        <a href="/static/index.html" class="logo">CGEE™</a>
+        <a href="/static/index.html" class="logo">CGEE</a>
         <nav class="nav-links">
             <a href="/static/app.html">Predict</a>
             <a href="/static/about.html">How It Works</a>
@@ -137,190 +95,178 @@
         </nav>
     </header>
 
-    <main class="container">
-        <section class="hero">
+    <div class="container">
+        
+        <div class="hero">
+            <div class="pill-badge">REST API &middot; v1.0.0</div>
             <h1>API Reference</h1>
-            <p>CGEE™ exposes a simple REST API for real-time ETA prediction.</p>
-        </section>
-
-        <div class="base-url-card">
-            <div>
-                <div class="base-url" id="baseUrlText">http://localhost:8000</div>
-                <div class="base-url-note">Replace with your deployed domain in production.</div>
+            <div class="base-url">
+                Base URL: <span id="base-url-txt">http://localhost:8000</span>
+                <button onclick="copyBase()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copy</button>
             </div>
-            <button class="btn-copy" onclick="navigator.clipboard.writeText('http://localhost:8000')">Copy URL</button>
+            <div style="margin-top:8px; font-size: 13px; color: var(--success); opacity: 0; transition: opacity 0.3s;" id="copy-msg">Copied!</div>
         </div>
 
-        <div class="validation-box">
-            <div class="validation-title">Data Constraints</div>
-            Coordinates must be within Bengaluru bounds:<br>
-            Latitude: 12.70 to 13.20 &nbsp;&middot;&nbsp; Longitude: 77.30 to 77.80
-        </div>
-
-        <div class="endpoint">
-            <div class="endpoint-title">
-                <span class="method-badge method-get">GET</span> /health
+        <!-- Predict Route ETA -->
+        <div class="endpoint-card active">
+            <div class="ep-header" onclick="this.parentElement.classList.toggle('active')">
+                <span class="ep-badge badge-post">POST</span>
+                <span class="ep-path">/predict-route-eta</span>
+                <span class="ep-desc">Compute multi-horizon routes & ETAs</span>
+                <svg class="ep-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
             </div>
-            <p class="endpoint-desc">Check engine initialization status. Use this to verify the road graph and models are fully loaded into memory.</p>
-            
-            <div class="code-label">Response Example</div>
-            <pre class="code-block"><code>{
-  "status": "ok",
-  "engine_ready": true,
-  "graph": {"nodes": 34521, "edges": 82104},
-  "models": ["1_hour", "2_hour", "4_hour"],
-  "route_cache": {"hits": 12, "misses": 5, "maxsize": 256}
-}</code></pre>
-        </div>
+            <div class="ep-body">
+                <p>Receives geographical endpoints and calculates k=3 distinctly contextualized physical routes across the OpenStreetMap network, inferencing three separate XGBoost ensembles to predict multi-horizon temporal variations with incident penalty constraints.</p>
+                
+                <h4 style="margin-bottom:8px;">Request (JSON)</h4>
+                <div class="code-block">
+                    <span class="code-lang">json</span>
+<pre>{
+  <span class="json-key">"source"</span>: {
+    <span class="json-key">"lat"</span>: <span class="json-num">12.9716</span>,
+    <span class="json-key">"lon"</span>: <span class="json-num">77.5946</span>
+  },
+  <span class="json-key">"destination"</span>: {
+    <span class="json-key">"lat"</span>: <span class="json-num">12.9304</span>,
+    <span class="json-key">"lon"</span>: <span class="json-num">77.6784</span>
+  },
+  <span class="json-key">"departure_time"</span>: <span class="json-str">"2026-05-14T08:30:00Z"</span>
+}</pre>
+                </div>
 
-        <div class="endpoint">
-            <div class="endpoint-title">
-                <span class="method-badge method-post">POST</span> /predict-route-eta
-            </div>
-            <p class="endpoint-desc">Predict multi-horizon ETA for a route. Calculates optimal paths via graph routing and evaluates segment-level ETA using contextual ML models.</p>
-            
-            <div class="code-label">Request Body</div>
-            <pre class="code-block"><code>{
-  "source": {"lat": 13.1007, "lon": 77.5963},
-  "destination": {"lat": 12.8399, "lon": 77.6770}
-}</code></pre>
-
-            <div class="code-label">Successful Response (200 OK)</div>
-            <pre class="code-block"><code>{
-  "routes": [
+                <h4 style="margin-bottom:8px;">Response (200 OK)</h4>
+                <div class="code-block">
+                    <span class="code-lang">json</span>
+<pre>{
+  <span class="json-key">"routes"</span>: [
     {
-      "route_id": 1,
-      "label": "Fastest Route",
-      "color": "#3B82F6",
-      "eta_minutes": {
-        "1_hour": {"estimate": 38.2, "lower_bound": 34.1, "upper_bound": 43.7},
-        "2_hour": {"estimate": 44.6, "lower_bound": 39.2, "upper_bound": 51.3},
-        "4_hour": {"estimate": 52.1, "lower_bound": 44.8, "upper_bound": 60.9}
+      <span class="json-key">"route_id"</span>: <span class="json-num">1</span>,
+      <span class="json-key">"label"</span>: <span class="json-str">"Fastest Route"</span>,
+      <span class="json-key">"eta_minutes"</span>: {
+        <span class="json-key">"1_hour"</span>: { <span class="json-key">"estimate"</span>: <span class="json-num">34.2</span>, <span class="json-key">"lower_bound"</span>: <span class="json-num">30.1</span>, <span class="json-key">"upper_bound"</span>: <span class="json-num">41.3</span> },
+        <span class="json-key">"2_hour"</span>: { ... },
+        <span class="json-key">"4_hour"</span>: { ... }
       },
-      "confidence": {"1_hour": 0.87, "2_hour": 0.81, "4_hour": 0.73},
-      "meta": {
-        "distance_km": 28.4,
-        "segments": 112,
-        "incident": true,
-        "incident_segments": 3,
-        "avg_incident_severity": 0.41,
-        "route_geometry": [{"lat":13.1,"lon":77.5}, "..."]
+      <span class="json-key">"confidence"</span>: { <span class="json-key">"1_hour"</span>: <span class="json-num">0.88</span>, <span class="json-key">"2_hour"</span>: <span class="json-num">0.76</span>, <span class="json-key">"4_hour"</span>: <span class="json-num">0.69</span> },
+      <span class="json-key">"meta"</span>: {
+        <span class="json-key">"distance_km"</span>: <span class="json-num">14.2</span>,
+        <span class="json-key">"segments"</span>: <span class="json-num">78</span>,
+        <span class="json-key">"incident"</span>: <span class="json-num">true</span>,
+        <span class="json-key">"incident_segments"</span>: <span class="json-num">3</span>,
+        <span class="json-key">"route_geometry"</span>: [ ... ]
       }
     }
   ]
-}</code></pre>
-            <div class="error-list">
-                <b>Error Responses:</b><br>
-                • <code>422 Unprocessable Entity</code> — Invalid coordinates (out of bounds).<br>
-                • <code>503 Service Unavailable</code> — Engine not ready yet.<br>
-                • <code>500 Internal Server Error</code> — Pathfinding or computation failed.
+}</pre>
+                </div>
             </div>
         </div>
 
-        <div class="endpoint">
-            <div class="endpoint-title">
-                <span class="method-badge method-get">GET</span> /cache/clear
+        <!-- Health Check -->
+        <div class="endpoint-card">
+            <div class="ep-header" onclick="this.parentElement.classList.toggle('active')">
+                <span class="ep-badge badge-get">GET</span>
+                <span class="ep-path">/health</span>
+                <span class="ep-desc">Check engine initialization status</span>
+                <svg class="ep-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
             </div>
-            <p class="endpoint-desc">Clear the route cache. Useful after graph updates or memory cleanup.</p>
+            <div class="ep-body">
+                <p>Returns the real-time background status of the Contextual Graph ETA Engine processes.</p>
+                <div class="code-block">
+<pre>{
+  <span class="json-key">"engine_ready"</span>: <span class="json-num">true</span>,
+  <span class="json-key">"version"</span>: <span class="json-str">"v1.0"</span>
+}</pre>
+                </div>
+            </div>
         </div>
 
-        <section class="try-it-section">
-            <h2 class="try-title">Try it Live</h2>
-            <div class="inputs-grid">
+        <!-- Live Tester -->
+        <div class="tester-section">
+            <h2><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Live API Tester</h2>
+            
+            <div class="form-grid">
                 <div class="input-group">
-                    <label>Source Latitude</label>
-                    <input type="number" id="try-src-lat" value="13.1007" step="0.0001">
+                    <label>Source (Lat, Lon)</label>
+                    <input type="text" id="t-src" value="12.9716, 77.5946" placeholder="12.9716, 77.5946">
                 </div>
                 <div class="input-group">
-                    <label>Source Longitude</label>
-                    <input type="number" id="try-src-lon" value="77.5963" step="0.0001">
-                </div>
-                <div class="input-group">
-                    <label>Destination Latitude</label>
-                    <input type="number" id="try-dst-lat" value="12.8399" step="0.0001">
-                </div>
-                <div class="input-group">
-                    <label>Destination Longitude</label>
-                    <input type="number" id="try-dst-lon" value="77.6770" step="0.0001">
+                    <label>Destination (Lat, Lon)</label>
+                    <input type="text" id="t-dst" value="12.9304, 77.6784" placeholder="12.9304, 77.6784">
                 </div>
             </div>
-            <button class="btn-live" id="try-btn" onclick="runLiveTest()">Execute POST /predict-route-eta</button>
+            
+            <button class="btn-exec" onclick="runTest()" id="tester-btn">
+                Execute POST Request
+            </button>
 
-            <div id="live-response">
-                <div class="code-label" id="live-status">Response</div>
-                <pre class="code-block"><code id="live-code"></code></pre>
+            <div id="test-res-container">
+                <div class="res-status" id="t-status">200 OK</div>
+                <div style="font-size: 13px; color: var(--text-muted); float: right; margin-top:4px;" id="t-perf"></div>
+                <div class="code-block" style="clear:both; max-height:400px; overflow-y:auto; margin-bottom: 0;">
+                    <pre><code id="t-out">...</code></pre>
+                </div>
             </div>
-        </section>
-
-    </main>
-
-    <footer>
-        <div class="footer-text">&copy; 2026 Contextual Graph ETA Engine (CGEE™)</div>
-        <div class="footer-links">
-            <a href="/static/about.html">About</a>
-            <a href="/static/docs.html">API Docs</a>
-            <a href="#">GitHub</a>
         </div>
-    </footer>
+
+    </div>
 
     <script>
-        // Make the base URL dynamic so it matches where it's served
-        document.getElementById('baseUrlText').textContent = window.location.origin;
+        document.getElementById('base-url-txt').textContent = window.location.origin;
 
-        async function runLiveTest() {
-            const btn = document.getElementById('try-btn');
-            const resBox = document.getElementById('live-response');
-            const codeBox = document.getElementById('live-code');
-            const statusLabel = document.getElementById('live-status');
+        function copyBase() {
+            navigator.clipboard.writeText(window.location.origin);
+            const msg = document.getElementById('copy-msg');
+            msg.style.opacity = '1';
+            setTimeout(() => msg.style.opacity = '0', 2000);
+        }
 
-            const payload = {
-                source: {
-                    lat: parseFloat(document.getElementById('try-src-lat').value),
-                    lon: parseFloat(document.getElementById('try-src-lon').value)
-                },
-                destination: {
-                    lat: parseFloat(document.getElementById('try-dst-lat').value),
-                    lon: parseFloat(document.getElementById('try-dst-lon').value)
-                }
-            };
-
+        async function runTest() {
+            const btn = document.getElementById('tester-btn');
+            btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg> Executing...`;
             btn.disabled = true;
-            btn.textContent = 'Executing...';
-            resBox.style.display = 'block';
-            codeBox.textContent = 'Waiting for response...';
-            statusLabel.textContent = 'Loading';
 
+            const st = Date.now();
+            const sParts = document.getElementById('t-src').value.split(',');
+            const dParts = document.getElementById('t-dst').value.split(',');
+            
             try {
-                const start = performance.now();
-                const res = await fetch('/predict-route-eta', {
+                const res = await fetch(window.location.origin + '/predict-route-eta', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        source: {lat: parseFloat(sParts[0]), lon: parseFloat(sParts[1])},
+                        destination: {lat: parseFloat(dParts[0]), lon: parseFloat(dParts[1])}
+                    })
                 });
-                const ms = Math.round(performance.now() - start);
-                
-                statusLabel.textContent = `Response: HTTP ${res.status} (${ms}ms)`;
-                statusLabel.style.color = res.ok ? '#16A34A' : '#DC2626';
 
                 const data = await res.json();
                 
-                // Truncate geometry so it doesn't freeze the browser rendering
+                // Truncate geometry for rendering speed
                 if(data.routes) {
                     data.routes.forEach(r => {
                         if(r.meta && r.meta.route_geometry) {
-                            r.meta.route_geometry = `[... ${r.meta.route_geometry.length} points omitted for display ...]`;
+                            r.meta.route_geometry = `[ ${r.meta.route_geometry.length} node points omitted for display ]`;
                         }
                     });
                 }
 
-                codeBox.textContent = JSON.stringify(data, null, 2);
+                document.getElementById('test-res-container').style.display = 'block';
+                const stEl = document.getElementById('t-status');
+                stEl.textContent = `${res.status} ${res.ok ? 'OK' : 'Error'}`;
+                stEl.className = `res-status ${res.ok ? '' : 'err'}`;
+                document.getElementById('t-perf').textContent = `Responded in ${Date.now() - st}ms`;
+                
+                document.getElementById('t-out').textContent = JSON.stringify(data, null, 2);
+
             } catch(e) {
-                statusLabel.textContent = 'Network Error';
-                statusLabel.style.color = '#DC2626';
-                codeBox.textContent = e.toString();
+                document.getElementById('test-res-container').style.display = 'block';
+                document.getElementById('t-status').className = 'res-status err';
+                document.getElementById('t-status').textContent = 'Fetch Failed';
+                document.getElementById('t-out').textContent = String(e);
             } finally {
+                btn.innerHTML = `Execute POST Request`;
                 btn.disabled = false;
-                btn.textContent = 'Execute POST /predict-route-eta';
             }
         }
     </script>

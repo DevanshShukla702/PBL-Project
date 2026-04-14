@@ -3,459 +3,566 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CGEE™ | Predict ETA</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <meta name="description" content="CGEE — Contextual Graph ETA Engine. AI-powered traffic prediction for Bengaluru with multi-horizon XGBoost models.">
+    <meta property="og:title" content="CGEE — Predict Your Journey">
+    <meta property="og:description" content="ML traffic ETA prediction with graph routing. 1h, 2h, 4h horizons.">
+    <meta name="theme-color" content="#1A56DB">
+    <title>CGEE | Trip Explorer</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    
     <style>
         :root {
-            --primary: #2563EB;
-            --primary-hover: #1D4ED8;
-            --bg: #ffffff;
-            --text-main: #111827;
-            --text-muted: #6B7280;
-            --border: #E5E7EB;
-            --bg-light: #F9FAFB;
+            --primary: #1A56DB;
+            --primary-light: #EBF2FF;
+            --primary-dark: #1039A0;
+            --accent: #0EA5E9;
+            --success: #059669;
+            --warning: #D97706;
+            --danger: #DC2626;
+            --text-primary: #0F172A;
+            --text-secondary: #475569;
+            --text-muted: #94A3B8;
+            --bg-base: #FFFFFF;
+            --bg-surface: #F8FAFC;
+            --bg-elevated: #F1F5F9;
+            --border: #E2E8F0;
+            --border-focus: #1A56DB;
+            --shadow-sm: 0 1px 3px rgba(15,23,42,0.08);
+            --shadow-md: 0 4px 16px rgba(15,23,42,0.10);
+            --shadow-lg: 0 8px 32px rgba(15,23,42,0.12);
         }
+
+        @media (prefers-reduced-motion: no-preference) {
+            @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+            @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+            @keyframes slideInLeft { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+            @keyframes scaleIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+            @keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
+            @keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 1; } 100% { transform: scale(1.6); opacity: 0; } }
+            @keyframes spin { to { transform: rotate(360deg); } }
+            @keyframes routeGlow { 0%, 100% { opacity: 0.7; } 50% { opacity: 1.0; } }
+            
+            .anim-slideInLeft { animation: slideInLeft 0.5s ease forwards; }
+            .anim-scaleIn { animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        }
+
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Inter', sans-serif;
-            color: var(--text-main);
-            background-color: var(--bg);
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden; 
-        }
+        body { font-family: 'Inter', sans-serif; color: var(--text-secondary); background: var(--bg-base); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         a { text-decoration: none; color: inherit; }
+        button, input, select { font-family: inherit; }
         
-        /* Navigation */
-        header {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 16px 24px; border-bottom: 1px solid var(--border);
-            background-color: var(--bg); z-index: 200; 
+        /* Header */
+        header { display: flex; justify-content: space-between; align-items: center; padding: 12px 24px; background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(226,232,240,0.8); z-index: 200; flex-shrink: 0; }
+        .h-left { display: flex; align-items: center; gap: 32px; }
+        .logo { font-weight: 800; font-size: 20px; color: var(--primary); display: flex; align-items: center; gap: 10px; }
+        .nav-icon {
+            width: 32px; height: 32px;
+            background: linear-gradient(135deg, #1A56DB 0%, #0EA5E9 100%);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 12px rgba(26,86,219,0.3);
+            position: relative; overflow: hidden;
+            flex-shrink: 0;
         }
-        .logo { font-weight: 700; font-size: 20px; color: var(--primary); }
-        .nav-links { display: flex; gap: 24px; margin-right: 16px;}
-        .nav-links a { font-weight: 500; color: var(--text-muted); transition: color 0.2s; padding-bottom: 2px; }
-        .nav-links a:hover { color: var(--text-main); }
-        .nav-links a.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
+        .nav-icon::after { content:''; position:absolute;inset:0; background:linear-gradient(135deg,rgba(255,255,255,0.2) 0%,transparent 60%); }
+        .nav-links { display: flex; gap: 24px; }
+        .nav-links a { font-weight: 600; color: var(--text-secondary); padding-bottom: 2px; position: relative; font-size: 15px;}
+        .nav-links a.active { color: var(--primary); }
+        .nav-links a.active::after { content: ''; position: absolute; width: 100%; height: 2px; bottom: -2px; left: 0; background: var(--primary); }
 
-        /* Banner */
-        #init-banner {
-            display: none; background-color: #FEF3C7; color: #92400E;
-            text-align: center; padding: 8px; font-size: 14px; font-weight: 500; z-index: 150;
-        }
+        .h-right { display: flex; align-items: center; gap: 12px; font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
+        .status-dot.ready { background: var(--success); animation: pulse-ring 2s infinite; }
+        .status-dot.error { background: var(--danger); }
 
-        /* Layout */
-        .app-container { display: flex; flex: 1; height: calc(100vh - 61px); }
+        /* App Container */
+        .app-container { display: flex; flex: 1; overflow: hidden; position: relative;}
 
         /* Left Panel */
-        .left-panel {
-            width: 420px;
-            background-color: var(--bg);
-            border-right: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            z-index: 10;
-        }
+        .panel { width: 420px; background: var(--bg-base); display: flex; flex-direction: column; z-index: 10; border-right: 1px solid var(--border); box-shadow: 2px 0 12px rgba(0,0,0,0.02); }
+        .panel-content { flex: 1; overflow-y: auto; padding: 24px; }
         
-        .panel-content {
-            flex: 1; overflow-y: auto; padding: 24px;
-        }
+        /* Panel Head */
+        .p-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .p-title { display: flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 700; color: var(--text-primary); }
+        .btn-reset { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: white; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--text-secondary); transition: all 0.2s; }
+        .btn-reset:hover { border-color: var(--primary); color: var(--primary); }
 
-        /* Top Action Bar */
-        .action-bar {
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 20px;
-        }
-        .section-header {
-            display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 18px;
-        }
-        .btn-refresh {
-            background: white; border: 1px solid var(--border); color: var(--text-main);
-            padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 500;
-            cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s;
-        }
-        .btn-refresh:hover { background: var(--bg-light); border-color: #d1d5db; }
+        hr.divider { border: 0; height: 1px; background: var(--border); margin-bottom: 24px; }
 
-        /* Form Inputs */
-        .input-group { margin-bottom: 20px; }
-        .input-label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 6px; color: var(--text-main); }
-        select, input {
-            width: 100%; padding: 10px 12px; border: 1px solid var(--border);
-            border-radius: 6px; font-family: inherit; font-size: 13px; outline: none; background: white;
-        }
-        select:focus, input:focus { border-color: var(--primary); }
+        /* Inputs */
+        .io-container { position: relative; margin-bottom: 24px; }
+        .connector-line { position: absolute; top: 32px; bottom: 32px; left: 15px; width: 2px; border-left: 2px dashed #CBD5E1; z-index: 1; }
+        .btn-swap { position: absolute; top: 50%; left: 3px; transform: translateY(-50%); width: 26px; height: 26px; background: white; border: 1px solid var(--border); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 2; cursor: pointer; color: var(--text-secondary); box-shadow: var(--shadow-sm); transition: transform 0.3s ease; }
+        .btn-swap:hover { color: var(--primary); border-color: var(--primary); }
+
+        .form-group { margin-bottom: 16px; position: relative; z-index: 2;}
+        .fg-label { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; margin-bottom: 8px; color: var(--text-primary); letter-spacing: 0.04em; }
+        .dot-src { color: var(--primary); }
+        .dot-dst { color: var(--success); }
         
-        /* Time Input Row */
+        .input-wrapper { position: relative; }
+        .input-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none;}
+        .styled-input { width: 100%; padding: 12px 12px 12px 36px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-surface); font-size: 14px; font-weight: 500; color: var(--text-primary); outline: none; transition: all 0.2s; appearance: none;}
+        .styled-input:focus { background: white; border-color: var(--border-focus); box-shadow: 0 0 0 3px var(--primary-light); }
+        .si-src { border-left: 3px solid var(--primary); }
+        .si-dst { border-left: 3px solid var(--success); }
+        
+        .map-chip { display: none; margin-top: 8px; padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; flex-wrap: wrap; }
+        .mc-src { background: var(--primary-light); color: var(--primary-dark); }
+        .mc-dst { background: #D1FAE5; color: #065F46; }
+
         .time-row { display: flex; gap: 8px; }
-        .btn-now {
-            background: var(--bg-light); border: 1px solid var(--border);
-            border-radius: 6px; padding: 0 16px; font-size: 13px; font-weight: 600;
-            cursor: pointer; transition: 0.2s; white-space: nowrap; color: var(--text-main);
-        }
-        .btn-now:hover { background: #E5E7EB; }
+        .btn-now { background: var(--primary); color: white; border: none; padding: 0 16px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+        .btn-now:hover { background: var(--primary-dark); }
         
-        .btn-predict {
-            width: 100%; background-color: var(--primary); color: white; border: none;
-            border-radius: 8px; height: 48px; font-weight: 600; font-size: 16px;
-            cursor: pointer; transition: background 0.2s; display: flex;
-            align-items: center; justify-content: center; gap: 8px; margin-top: 10px;
-        }
-        .btn-predict:hover:not(:disabled) { background-color: var(--primary-hover); }
+        /* Departure Intel (Smart Suggestions) */
+        .smart-dep-strip { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; display: none;}
+        .sd-chip { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 999px; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--text-secondary); transition: all 0.2s; }
+        .sd-chip.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .sd-chip:hover:not(.active) { background: var(--bg-elevated); }
+
+        /* Predict Button */
+        .btn-predict { width: 100%; height: 52px; background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 20px rgba(26,86,219,0.3); cursor: pointer; transition: all 0.2s; margin-top: 8px;}
+        .btn-predict:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(26,86,219,0.4); }
         .btn-predict:disabled { opacity: 0.7; cursor: not-allowed; }
-
-        .spinner {
-            width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3);
-            border-top-color: white; border-radius: 50%;
-            animation: spin 1s linear infinite; display: none;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* Map hint */
-        .map-hint { font-size: 12px; color: var(--primary); font-weight: 500; margin-top: 6px; display: flex; align-items: flex-start; gap:6px;}
-
-        /* ETA Results */
-        #results-section { display: none; margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border); }
         
-        /* Route Selector */
-        .route-tabs { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px;}
-        .route-tab {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 12px 16px; border: 1px solid var(--border); border-radius: 8px;
-            background: white; cursor: pointer; transition: all 0.2s;
-        }
-        .route-tab:hover { background: var(--bg-light); border-color: #d1d5db; }
-        .route-tab.active { border: 2px solid var(--primary); background: #EFF6FF; }
+        .spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite; display: none; }
+
+        /* Skeleton Loaders */
+        .skeletons { display: none; margin-top: 32px; }
+        .skel-card { height: 72px; border-radius: 12px; margin-bottom: 12px; background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%); background-size: 400px 100%; animation: shimmer 1.5s infinite; }
+
+        /* Results / Compare */
+        .res-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; margin-top: 32px;}
+        .res-title { font-weight: 700; font-size: 16px; color: var(--text-primary); }
+        .res-btns { display: flex; gap: 8px; }
+        .btn-sm-icon { width: 32px; height: 32px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-secondary); transition: all 0.2s; }
+        .btn-sm-icon:hover { color: var(--primary); border-color: var(--primary); }
+
+        .route-tabs { display: flex; flex-direction: column; gap: 8px; }
+        .route-card { display: flex; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: white; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; align-items: center; }
+        .rc-color-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--text-muted); }
+        .route-card:hover { transform: translateX(2px); box-shadow: var(--shadow-sm); }
+        .route-card.active { border-color: var(--border-focus); background: var(--primary-light); box-shadow: var(--shadow-sm); }
         
-        .rt-left { display: flex; align-items: center; gap: 12px; }
-        .rt-color { width: 14px; height: 14px; border-radius: 4px; flex-shrink: 0;}
-        .rt-title { font-weight: 600; font-size: 14px; color: var(--text-main);}
-        .rt-subtitle { font-size: 12px; color: var(--text-muted); margin-top: 2px;}
-        .rt-right { text-align: right; }
-        .rt-time { font-size: 18px; font-weight: 700; color: var(--text-main); }
-        .rt-inc { font-size: 11px; font-weight: 600; color: #DC2626; margin-top: 2px; display:flex; align-items:center; gap:2px; justify-content: flex-end;}
+        .rc-mid { flex: 1; padding-left: 12px; }
+        .rc-title { font-weight: 700; font-size: 14px; color: var(--text-primary); margin-bottom: 4px; }
+        .rc-sub { display: inline-flex; align-items: center; background: var(--bg-elevated); padding: 2px 8px; border-radius: 999px; font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+        .rc-right { text-align: right; }
+        .rc-warn { font-size: 11px; font-weight: 700; color: var(--danger); background: #FEE2E2; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 2px;}
+        .rc-clear { font-size: 11px; font-weight: 700; color: var(--success); background: #DCFCE7; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 2px;}
 
-        /* Selected Route Details */
-        #selected-route-details { display: none; }
-        .horizon-card {
-            border: 1px solid var(--border); border-radius: 8px; padding: 16px;
-            margin-bottom: 12px; background-color: var(--bg-light); 
-        }
-        .card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        .horizon-label { font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;}
-        .conf-badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+        /* Horizon Cards */
+        .horizon-blocks { display: flex; flex-direction: column; gap: 12px; margin-top: 24px; }
+        .hz-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 16px; position: relative; overflow: hidden; box-shadow: var(--shadow-sm); }
+        .hz-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+        .hz-1::before { background: var(--primary); }
+        .hz-2::before { background: var(--warning); }
+        .hz-4::before { background: #0F766E; }
+
+        .hz-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .hz-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+        .hz-conf { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+        .conf-high { background: #DCFCE7; color: #15803D; }
+        .conf-med { background: #FEF3C7; color: #92400E; }
+        .conf-low { background: #FEE2E2; color: #991B1B; }
+
+        .hz-val { font-size: 36px; font-weight: 800; color: var(--text-primary); line-height: 1; margin-bottom: 12px; }
+        .hz-val span { font-size: 16px; font-weight: 600; color: var(--text-muted); display: inline-block; margin-left: 4px; }
         
-        .eta-val { font-size: 26px; font-weight: 600; line-height: 1; margin-bottom: 4px; color: var(--text-main); }
-        .eta-range { font-size: 13px; color: var(--text-muted); }
+        .hz-range-bar { height: 6px; background: var(--bg-elevated); border-radius: 999px; position: relative; margin-bottom: 6px; }
+        .hz-range-fill { position: absolute; height: 100%; border-radius: 999px; z-index: 1; }
+        .hz-1 .hz-range-fill { background: var(--primary); }
+        .hz-2 .hz-range-fill { background: var(--warning); }
+        .hz-4 .hz-range-fill { background: #0F766E; }
+        .hz-range-dot { position: absolute; width: 10px; height: 10px; background: white; border: 2px solid; border-radius: 50%; top: -2px; z-index: 2; transform: translateX(-50%); }
+        .hz-1 .hz-range-dot { border-color: var(--primary); }
+        .hz-2 .hz-range-dot { border-color: var(--warning); }
+        .hz-4 .hz-range-dot { border-color: #0F766E; }
+        .hz-bounds { font-size: 12px; color: var(--text-muted); font-weight: 500; }
 
-        .route-info { margin-top: 20px; }
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
-        .info-item { background: white; border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center; }
-        .info-title { font-size: 12px; color: var(--text-muted); font-weight: 500; text-transform: uppercase; margin-bottom: 4px;}
-        .info-val { font-size: 16px; font-weight: 600; }
+        /* Meta details */
+        .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+        .meta-box { border: 1px solid var(--border); border-radius: 10px; padding: 12px; text-align: center; }
+        .meta-box svg { color: var(--text-muted); margin-bottom: 4px; }
+        .meta-box-val { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+        .meta-box-lbl { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
 
-        .incident-box { padding: 14px; border-radius: 8px; margin-bottom: 16px;}
-        .inc-clear { background-color: #DCFCE7; color: #15803D; border: 1px solid #BBF7D0; }
-        .inc-warn { background-color: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA; }
-        .inc-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; display:flex; align-items:center; gap:6px;}
-        .inc-desc { font-size: 13px; opacity: 0.9; }
+        /* Incident Box */
+        .inc-box { margin-top: 16px; border-radius: 10px; padding: 16px; display: flex; gap: 16px; align-items: flex-start; }
+        .ib-clear { background: #F0FDF4; border: 1px solid #BBF7D0; }
+        .ib-clear .ib-icon { color: var(--success); }
+        .ib-warn { background: #FFF7ED; border: 1px solid #FED7AA; }
+        .ib-warn .ib-icon { color: #EA580C; animation: pulse-ring 2s infinite; }
+        .ib-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; color: var(--text-primary); }
+        .ib-desc { font-size: 13px; font-weight: 500; color: var(--text-secondary); }
+        .sev-bar { height: 4px; background: var(--bg-base); border-radius: 2px; margin-top: 8px; width: 100%; border: 1px solid #FED7AA; overflow: hidden;}
+        .sev-fill { height: 100%; background: linear-gradient(90deg, #FBBF24, #DC2626); }
 
-        /* Status Bar */
-        .status-bar {
-            padding: 14px 24px; border-top: 1px solid var(--border);
-            display: flex; align-items: center; gap: 8px; font-size: 13px;
-            color: var(--text-muted); background: var(--bg-light); flex-shrink: 0;
-        }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; background-color: #9CA3AF; }
-        .status-dot.ready { background-color: #10B981; }
+        /* Comparison Table */
+        .comp-view { display: none; margin-top: 24px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: white; }
+        .comp-table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: center;}
+        .comp-table th { background: var(--bg-surface); padding: 12px; font-weight: 700; color: var(--text-primary); border-bottom: 1px solid var(--border); }
+        .comp-table th:first-child { text-align: left; }
+        .comp-table td { padding: 12px; font-weight: 600; border-bottom: 1px solid var(--border); border-left: 1px solid var(--border); }
+        .comp-table td:first-child { text-align: left; color: var(--text-muted); border-left: none; }
+        .highlight-cell { background: var(--primary-light); color: var(--primary-dark); }
 
-        /* Right Panel Map */
-        .right-panel { flex: 1; position: relative; z-index: 0; }
-        #map { width: 100%; height: 100%; z-index: 1; }
+        /* Map */
+        .map-wrapper { flex: 1; position: relative; z-index: 1; }
+        #map { width: 100%; height: 100%; }
+        
+        .map-hint { position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%); background: white; padding: 12px 24px; border-radius: 999px; box-shadow: var(--shadow-lg); font-weight: 600; font-size: 14px; color: var(--text-primary); z-index: 1000; animation: fadeUp 0.4s ease; pointer-events: none;}
+        
+        .leaflet-popup-content-wrapper { border-radius: 12px; box-shadow: var(--shadow-md); padding: 0; overflow: hidden; }
+        .leaflet-popup-content { margin: 0; }
+        .r-popup { padding: 16px; min-width: 180px; }
+        .rp-title { font-weight: 800; font-size: 14px; margin-bottom: 8px; text-transform: uppercase; display: flex; align-items:center; gap:6px;}
+        .rp-title::before { content:''; width:8px; height:8px; border-radius:50%; background:currentColor; }
+        .rp-eta { font-size: 24px; font-weight: 800; color: var(--text-primary); line-height: 1; margin-bottom: 8px;}
+        .rp-eta span { font-size: 14px; font-weight: 600; color: var(--text-muted); }
+        .rp-sub { font-size: 13px; font-weight: 600; color: var(--text-secondary); display: flex; justify-content: space-between; }
 
-        /* Leaflet Popups */
-        .leaflet-popup-content-wrapper { border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); }
-        .route-popup { font-family: 'Inter', sans-serif; }
-        .route-popup-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;}
-        .route-popup-eta { font-size: 18px; font-weight: 700; color: #111827; }
-        .route-popup-sub { font-size: 12px; color: #6B7280; margin-top: 2px;}
+        /* Custom Marker CSS */
+        .marker-pulse { border-radius: 50%; position: relative; display: flex; align-items: center; justify-content: center; }
+        .marker-pulse::after { content: ''; position: absolute; width: 100%; height: 100%; border-radius: 50%; background: inherit; animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; z-index: -1; }
+        .marker-inner { width: 40%; height: 40%; background: white; border-radius: 50%; }
 
+        /* Toast */
+        .toast { position: fixed; bottom: 24px; right: 24px; background: #0F172A; color: white; padding: 12px 20px; border-radius: 8px; font-weight: 600; font-size: 14px; box-shadow: var(--shadow-lg); z-index: 3000; display: none; opacity: 0; transition: opacity 0.3s ease; display:flex; align-items:center; gap:8px;}
+        .toast.show { opacity: 1; }
+
+        /* Responsive */
         @media (max-width: 768px) {
-            .app-container { flex-direction: column-reverse; height: auto; overflow-y: auto;}
-            .left-panel { width: 100%; border-right: none; overflow-y: visible;}
-            .right-panel { height: 400px; flex: none; }
+            .app-container { flex-direction: column-reverse; overflow-y: auto;}
+            .panel { width: 100%; border-right: none; overflow: visible; box-shadow: none; z-index: 100; border-top: 1px solid var(--border);}
+            .map-wrapper { height: 50vh; flex: none; }
+            .map-hint { bottom: 16px; }
         }
     </style>
 </head>
 <body>
+    <script>if(!localStorage.getItem('cgee_auth')){window.location.href='/static/login.html';}</script>
 
     <header>
-        <a href="/static/index.html" class="logo">CGEE™</a>
-        <nav class="nav-links">
-            <a href="/static/app.html" class="active">Predict</a>
-            <a href="/static/about.html">How It Works</a>
-            <a href="/static/docs.html">API Docs</a>
-        </nav>
+        <div class="h-left">
+            <a href="/static/index.html" class="logo">
+                <div class="nav-icon">
+                    <svg width="18" height="18" viewBox="0 0 42 42" fill="none" style="position:relative;z-index:1">
+                        <circle cx="7" cy="21" r="4" fill="white" opacity="0.95"/>
+                        <circle cx="35" cy="10" r="3.5" fill="white" opacity="0.95"/>
+                        <circle cx="35" cy="32" r="3.5" fill="#B3D9FF" opacity="0.9"/>
+                        <polyline points="7,21 14,15 21,21 28,13 35,10" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <line x1="21" y1="21" x2="35" y2="32" stroke="white" stroke-width="1.8" opacity="0.5"/>
+                    </svg>
+                </div>
+                <span>CGEE</span>
+            </a>
+            <nav class="nav-links">
+                <a href="/static/app.html" class="active">Predict</a>
+                <a href="/static/about.html">Architecture</a>
+                <a href="/static/docs.html">API</a>
+            </nav>
+        </div>
+        <div class="h-right">
+            <div class="status-dot" id="engine-dot"></div>
+            <span id="engine-text">Connecting...</span>
+        </div>
     </header>
-
-    <div id="init-banner">Engine initializing — predictions will be available shortly</div>
 
     <div class="app-container">
         
-        <aside class="left-panel">
+        <aside class="panel anim-slideInLeft">
             <div class="panel-content">
                 
-                <div class="action-bar">
-                    <div class="section-header">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
+                <div class="p-head">
+                    <div class="p-title">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
                         Trip Explorer
                     </div>
-                    <button class="btn-refresh" onclick="resetForm()">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                    <button class="btn-reset" onclick="resetForm()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                         Reset
                     </button>
                 </div>
+                
+                <hr class="divider">
 
-                <div class="input-group">
-                    <label class="input-label">From</label>
-                    <select id="src-landmark" onchange="fillCoords('src')">
-                        <option value="">-- Select a landmark or click map --</option>
-                        <option value="12.9716,77.5946">Bengaluru Center</option>
-                        <option value="13.1007,77.5963">Yelahanka</option>
-                        <option value="13.0358,77.5970">Hebbal</option>
-                        <option value="12.9757,77.6011">MG Road</option>
-                        <option value="12.9784,77.6408">Indiranagar</option>
-                        <option value="12.9279,77.6271">Koramangala</option>
-                        <option value="12.9698,77.7499">Whitefield</option>
-                        <option value="12.8399,77.6770">Electronic City</option>
-                        <option value="12.9308,77.5838">Jayanagar</option>
-                        <option value="12.9766,77.5713">Majestic</option>
-                        <option value="13.0031,77.5643">Malleshwaram</option>
-                        <option value="12.9569,77.7011">Marathahalli</option>
-                        <option value="12.9121,77.6446">HSR Layout</option>
-                        <option value="12.9255,77.5468">Banashankari</option>
-                        <option value="12.9022,77.4839">Kengeri</option>
-                        <option value="13.0275,77.5407">Yeswanthpur</option>
-                        <option value="12.9304,77.6784">Bellandur</option>
-                        <option value="12.9166,77.6101">BTM Layout</option>
-                        <option value="13.0084,77.6896">KR Puram</option>
-                        <option value="12.9176,77.6235">Silk Board</option>
-                        <option value="13.0285,77.5197">Peenya</option>
-                        <option value="12.9982,77.5530">Rajajinagar</option>
-                        <option value="12.9421,77.5748">Basavanagudi</option>
-                        <option value="12.9063,77.5857">JP Nagar</option>
-                        <option value="12.9859,77.6631">CV Raman Nagar</option>
-                        <option value="12.9818,77.6231">Ulsoor</option>
-                        <option value="12.9609,77.6387">Domlur</option>
-                        <option value="12.9226,77.6174">Madiwala</option>
-                        <option value="12.9030,77.6241">Bommanahalli</option>
-                        <option value="12.9649,77.5744">K R Market</option>
-                        <option value="13.0805,77.5562">Vidyaranyapura</option>
-                        <option value="13.0785,77.6067">Jakkur</option>
-                        <option value="13.0620,77.5951">Sahakara Nagar</option>
-                        <option value="custom" style="display:none;" id="src-custom-opt">Custom Map Selection</option>
-                    </select>
-                    <!-- Hidden robust inputs -->
-                    <input type="hidden" id="src-lat">
-                    <input type="hidden" id="src-lon">
+                <div class="io-container">
+                    <div class="connector-line"></div>
+                    <button class="btn-swap" onclick="swapEndpoints()" title="Swap points" id="btn-swap">⇅</button>
+
+                    <div class="form-group">
+                        <div class="fg-label"><span class="dot-src">●</span> FROM</div>
+                        <div class="input-wrapper">
+                            <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="10" r="3"/><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/></svg>
+                            <select class="styled-input si-src" id="src-landmark" onchange="fillCoords('src')">
+                                <option value="">Select a landmark or click map</option>
+                                <option value="12.9716,77.5946">Bengaluru Center</option>
+                                <option value="13.1007,77.5963">Yelahanka</option>
+                                <option value="12.9279,77.6271">Koramangala</option>
+                                <option value="12.9784,77.6408">Indiranagar</option>
+                                <option value="12.8399,77.6770">Electronic City</option>
+                                <option value="custom" style="display:none;" id="src-custom-opt">Map Selection</option>
+                            </select>
+                        </div>
+                        <div class="map-chip mc-src" id="src-chip"></div>
+                        <input type="hidden" id="src-lat"><input type="hidden" id="src-lon">
+                    </div>
+
+                    <div class="form-group">
+                        <div class="fg-label"><span class="dot-dst">●</span> TO</div>
+                        <div class="input-wrapper">
+                            <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="10" r="3"/><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/></svg>
+                            <select class="styled-input si-dst" id="dst-landmark" onchange="fillCoords('dst')">
+                                <option value="">Select a landmark or click map</option>
+                                <option value="12.9716,77.5946">Bengaluru Center</option>
+                                <option value="13.1007,77.5963">Yelahanka</option>
+                                <option value="12.9279,77.6271">Koramangala</option>
+                                <option value="12.9784,77.6408">Indiranagar</option>
+                                <option value="12.8399,77.6770">Electronic City</option>
+                                <option value="custom" style="display:none;" id="dst-custom-opt">Map Selection</option>
+                            </select>
+                        </div>
+                        <div class="map-chip mc-dst" id="dst-chip"></div>
+                        <input type="hidden" id="dst-lat"><input type="hidden" id="dst-lon">
+                    </div>
                 </div>
 
-                <div class="input-group">
-                    <label class="input-label">Destination</label>
-                    <select id="dst-landmark" onchange="fillCoords('dst')">
-                        <option value="">-- Select a landmark or click map --</option>
-                        <option value="12.9716,77.5946">Bengaluru Center</option>
-                        <option value="13.1007,77.5963">Yelahanka</option>
-                        <option value="13.0358,77.5970">Hebbal</option>
-                        <option value="12.9757,77.6011">MG Road</option>
-                        <option value="12.9784,77.6408">Indiranagar</option>
-                        <option value="12.9279,77.6271">Koramangala</option>
-                        <option value="12.9698,77.7499">Whitefield</option>
-                        <option value="12.8399,77.6770">Electronic City</option>
-                        <option value="12.9308,77.5838">Jayanagar</option>
-                        <option value="12.9766,77.5713">Majestic</option>
-                        <option value="13.0031,77.5643">Malleshwaram</option>
-                        <option value="12.9569,77.7011">Marathahalli</option>
-                        <option value="12.9121,77.6446">HSR Layout</option>
-                        <option value="12.9255,77.5468">Banashankari</option>
-                        <option value="12.9022,77.4839">Kengeri</option>
-                        <option value="13.0275,77.5407">Yeswanthpur</option>
-                        <option value="12.9304,77.6784">Bellandur</option>
-                        <option value="12.9166,77.6101">BTM Layout</option>
-                        <option value="13.0084,77.6896">KR Puram</option>
-                        <option value="12.9176,77.6235">Silk Board</option>
-                        <option value="13.0285,77.5197">Peenya</option>
-                        <option value="12.9982,77.5530">Rajajinagar</option>
-                        <option value="12.9421,77.5748">Basavanagudi</option>
-                        <option value="12.9063,77.5857">JP Nagar</option>
-                        <option value="12.9859,77.6631">CV Raman Nagar</option>
-                        <option value="12.9818,77.6231">Ulsoor</option>
-                        <option value="12.9609,77.6387">Domlur</option>
-                        <option value="12.9226,77.6174">Madiwala</option>
-                        <option value="12.9030,77.6241">Bommanahalli</option>
-                        <option value="12.9649,77.5744">K R Market</option>
-                        <option value="13.0805,77.5562">Vidyaranyapura</option>
-                        <option value="13.0785,77.6067">Jakkur</option>
-                        <option value="13.0620,77.5951">Sahakara Nagar</option>
-                        <option value="custom" style="display:none;" id="dst-custom-opt">Custom Map Selection</option>
-                    </select>
-                    <input type="hidden" id="dst-lat">
-                    <input type="hidden" id="dst-lon">
-                </div>
-
-                <div class="input-group">
-                    <label class="input-label">Departure Time</label>
+                <div class="form-group">
+                    <div class="fg-label" style="color:var(--text-muted)">DEPARTURE TIME</div>
                     <div class="time-row">
-                        <input type="datetime-local" id="dep-time" title="Leave blank for immediate departure">
+                        <div class="input-wrapper" style="flex:1">
+                            <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <input type="datetime-local" class="styled-input" id="dep-time" style="padding-left:36px; border-left:1px solid var(--border)">
+                        </div>
                         <button class="btn-now" onclick="setNow()">Now</button>
                     </div>
-                    <div class="map-hint">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                        Tip: Click anywhere on the map to set source and destination.
+                    
+                    <!-- Smart Departure UI -->
+                    <div class="smart-dep-strip" id="smart-dep">
+                        <div class="sd-chip active" onclick="activateChip(this, 0)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Leave Now &middot; <span id="sd-0"></span></div>
+                        <div class="sd-chip" onclick="activateChip(this, 1)" title="Uses 1h XGBoost model"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> In 1 hr &middot; <span id="sd-1"></span></div>
+                        <div class="sd-chip" onclick="activateChip(this, 4)" title="Uses 4h XGBoost model"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> In 4 hr &middot; <span id="sd-4"></span></div>
                     </div>
                 </div>
 
                 <button class="btn-predict" id="predict-btn" onclick="predictETA()">
-                    <span id="btn-text">Predict ETA</span>
+                    <span id="btn-text">Compute Journey</span>
                     <div id="btn-spinner" class="spinner"></div>
                 </button>
 
-                <div id="results-section">
-                    <div class="section-header" style="margin-bottom: 12px; margin-top:24px;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                        Select a Route
-                    </div>
+                <!-- Skeleton Loader -->
+                <div class="skeletons" id="skeletons">
+                    <div class="skel-card"></div>
+                    <div class="skel-card"></div>
+                    <div class="skel-card"></div>
+                </div>
+
+                <!-- Results Output -->
+                <div id="results-wrapper" style="display:none;" class="anim-scaleIn">
                     
+                    <div class="res-actions">
+                        <div class="res-title">Select Route</div>
+                        <div class="res-btns">
+                            <button class="btn-sm-icon" id="btn-comp" onclick="toggleCompare()" title="Compare Routes"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></button>
+                            <button class="btn-sm-icon" onclick="shareRoute()" title="Share"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>
+                        </div>
+                    </div>
+
                     <div class="route-tabs" id="route-tabs"></div>
                     
-                    <div id="selected-route-details">
-                        <div class="section-header" style="margin-top:24px; margin-bottom:16px;">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                            ETAs by Time Horizon
-                        </div>
-                        <div id="horizons-container"></div>
-                        <div class="route-info" id="route-info-container"></div>
+                    <div class="comp-view" id="comp-view">
+                        <table class="comp-table" id="comp-table"></table>
                     </div>
+
+                    <div id="selected-route-details">
+                        <div class="horizon-blocks" id="horizons-container"></div>
+                        
+                        <div class="meta-grid" id="meta-grid"></div>
+                        
+                        <div id="inc-container"></div>
+                    </div>
+
                 </div>
 
             </div>
-            
-            <div class="status-bar">
-                <div class="status-dot" id="engine-dot"></div>
-                <span id="engine-text">Initializing...</span>
-            </div>
         </aside>
 
-        <main class="right-panel">
+        <main class="map-wrapper">
+            <div class="map-hint" id="map-hint">Click map to set start point</div>
             <div id="map"></div>
         </main>
     </div>
 
-    <!-- Scripts -->
+    <!-- Toast -->
+    <div class="toast" id="toast"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied to clipboard!</div>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // Init Map
+        // Setup Map
         const map = L.map('map', { zoomControl: false }).setView([12.9716, 77.5946], 12);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors'
-        }).addTo(map);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
         L.control.zoom({ position: 'topleft' }).addTo(map);
 
         let mapLayers = [];
         let allRoutesData = [];
         let curSourceMarker = null;
         let curDestMarker = null;
+        let isComparing = false;
+        let incidentMarkers = []; // Hover-only incident markers
 
-        // Map Click Logic
-        map.on('click', function(e) {
+        const routeColors = ['#1A56DB', '#27272A', '#9333EA']; // Blue, Gray-Black, Purple
+
+        // Incident marker icon — small, subtle warning triangle
+        const incidentIcon = L.divIcon({
+            className: '',
+            html: `<div style="width:18px;height:18px;background:#D97706;border-radius:50%;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:9px;color:white;font-weight:800;">!</div>`,
+            iconSize: [18, 18],
+            iconAnchor: [9, 9]
+        });
+
+        function showIncidentMarkers(coords) {
+            hideIncidentMarkers();
+            coords.forEach(c => {
+                const m = L.marker([c.lat, c.lon], {icon: incidentIcon, interactive: false}).addTo(map);
+                incidentMarkers.push(m);
+            });
+        }
+
+        function hideIncidentMarkers() {
+            incidentMarkers.forEach(m => map.removeLayer(m));
+            incidentMarkers = [];
+        }
+
+        // Engine Status
+        async function checkHealth() {
+            try {
+                const res = await fetch('/health');
+                const data = await res.json();
+                if (data.engine_ready) {
+                    document.getElementById('engine-dot').className = 'status-dot ready';
+                    document.getElementById('engine-text').textContent = 'Engine ready';
+                } else { setTimeout(checkHealth, 3000); }
+            } catch (err) {
+                document.getElementById('engine-dot').className = 'status-dot error';
+                document.getElementById('engine-text').textContent = 'Offline';
+            }
+        }
+        checkHealth();
+
+        // Custom Marker Icons
+        const createMarkerIcon = (color) => {
+            return L.divIcon({
+                className: 'custom-div-icon',
+                html: `<div class="marker-pulse" style="background:${color}; width:20px; height:20px;"><div class="marker-inner"></div></div>`,
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+        };
+
+        // Hint Logic
+        function updateHint() {
+            const h = document.getElementById('map-hint');
+            const s = document.getElementById('src-lat').value;
+            const d = document.getElementById('dst-lat').value;
+            if(!s && !d) { h.textContent = "Click map to set start point"; h.style.display = 'block'; }
+            else if(s && !d) { h.textContent = "Click map to set destination"; h.style.display = 'block'; }
+            else { h.style.display = 'none'; }
+        }
+
+        // Map Click Reverse Geocode
+        map.on('click', async function(e) {
             const lat = e.latlng.lat;
             const lon = e.latlng.lng;
 
             const srcLat = document.getElementById('src-lat');
-            const srcLon = document.getElementById('src-lon');
             const dstLat = document.getElementById('dst-lat');
-            const dstLon = document.getElementById('dst-lon');
+            let targetType = null;
 
-            if (!srcLat.value) {
-                srcLat.value = lat; srcLon.value = lon;
-                const opt = document.getElementById('src-custom-opt');
-                opt.style.display = 'block';
-                opt.value = `${lat},${lon}`;
-                opt.textContent = `Fetching area name...`;
-                document.getElementById('src-landmark').value = opt.value;
+            if (!srcLat.value) targetType = 'src';
+            else if (!dstLat.value) targetType = 'dst';
+            else return; // Both set
 
-                fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`)
-                    .then(res => res.json())
-                    .then(data => {
-                        const locName = data.address ? (data.address.suburb || data.address.neighbourhood || data.address.road || data.display_name.split(',')[0]) : `Selected Location`;
-                        opt.textContent = `${locName} (Map)`;
-                    }).catch(() => {
-                        opt.textContent = `Map Selection`;
-                    });
+            document.getElementById(`${targetType}-lat`).value = lat;
+            document.getElementById(`${targetType}-lon`).value = lon;
+            
+            const opt = document.getElementById(`${targetType}-custom-opt`);
+            opt.style.display = 'block';
+            opt.value = `${lat},${lon}`;
+            document.getElementById(`${targetType}-landmark`).value = opt.value;
+            
+            const chip = document.getElementById(`${targetType}-chip`);
+            chip.style.display = 'inline-flex';
+            chip.textContent = "Fetching location...";
 
+            // Place Marker
+            const color = targetType === 'src' ? '#1A56DB' : '#059669';
+            if(targetType === 'src') {
                 if(curSourceMarker) map.removeLayer(curSourceMarker);
-                curSourceMarker = L.circleMarker([lat, lon], {radius: 8, fillColor: '#2563EB', color: 'white', weight: 2, fillOpacity: 1, zIndexOffset: 1000}).addTo(map).bindPopup("Start").openPopup();
-            } 
-            else if (!dstLat.value) {
-                dstLat.value = lat; dstLon.value = lon;
-                const opt = document.getElementById('dst-custom-opt');
-                opt.style.display = 'block';
-                opt.value = `${lat},${lon}`;
-                opt.textContent = `Fetching area name...`;
-                document.getElementById('dst-landmark').value = opt.value;
-                
-                fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`)
-                    .then(res => res.json())
-                    .then(data => {
-                        const locName = data.address ? (data.address.suburb || data.address.neighbourhood || data.address.road || data.display_name.split(',')[0]) : `Selected Location`;
-                        opt.textContent = `${locName} (Map)`;
-                    }).catch(() => {
-                        opt.textContent = `Map Selection`;
-                    });
-
+                curSourceMarker = L.marker([lat, lon], {icon: createMarkerIcon(color)}).addTo(map);
+            } else {
                 if(curDestMarker) map.removeLayer(curDestMarker);
-                curDestMarker = L.circleMarker([lat, lon], {radius: 8, fillColor: '#10B981', color: 'white', weight: 2, fillOpacity: 1, zIndexOffset: 1000}).addTo(map).bindPopup("End").openPopup();
+                curDestMarker = L.marker([lat, lon], {icon: createMarkerIcon(color)}).addTo(map);
             }
+
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+                const data = await res.json();
+                const nm = data.address ? (data.address.suburb || data.address.neighbourhood || data.address.road || data.display_name.split(',')[0]) : "Map Point";
+                chip.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="margin-right:4px;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 0 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg> ${nm}`;
+            } catch(e) { chip.textContent = `${lat.toFixed(3)}, ${lon.toFixed(3)}`; }
+
+            updateHint();
         });
 
         function setNow() {
             const now = new Date();
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
             document.getElementById('dep-time').value = now.toISOString().slice(0,16);
+            document.getElementById('smart-dep').style.display = 'none';
         }
         setNow();
 
         function fillCoords(type) {
             const val = document.getElementById(`${type}-landmark`).value;
+            const chip = document.getElementById(`${type}-chip`);
             if(val && val !== 'custom') {
                 const [lat, lon] = val.split(',');
                 document.getElementById(`${type}-lat`).value = lat;
                 document.getElementById(`${type}-lon`).value = lon;
+                chip.style.display = 'none';
                 
-                // Hide custom option if a real landmark is selected
-                document.getElementById(`${type}-custom-opt`).style.display = 'none';
-                
-                // Update map marker instantly
                 const mkLat = parseFloat(lat);
                 const mkLon = parseFloat(lon);
+                const color = type === 'src' ? '#1A56DB' : '#059669';
                 
                 if (type === 'src') {
                     if(curSourceMarker) map.removeLayer(curSourceMarker);
-                    curSourceMarker = L.circleMarker([mkLat, mkLon], {radius: 8, fillColor: '#2563EB', color: 'white', weight: 2, fillOpacity: 1, zIndexOffset: 1000}).addTo(map).bindPopup("Start").openPopup();
-                    map.setView([mkLat, mkLon], 13);
+                    curSourceMarker = L.marker([mkLat, mkLon], {icon: createMarkerIcon(color)}).addTo(map);
                 } else {
                     if(curDestMarker) map.removeLayer(curDestMarker);
-                    curDestMarker = L.circleMarker([mkLat, mkLon], {radius: 8, fillColor: '#10B981', color: 'white', weight: 2, fillOpacity: 1, zIndexOffset: 1000}).addTo(map).bindPopup("End").openPopup();
-                    map.setView([mkLat, mkLon], 13);
+                    curDestMarker = L.marker([mkLat, mkLon], {icon: createMarkerIcon(color)}).addTo(map);
                 }
-            } else if (!val) {
-                document.getElementById(`${type}-lat`).value = "";
-                document.getElementById(`${type}-lon`).value = "";
-                // Clear marker
-                if (type === 'src' && curSourceMarker) { map.removeLayer(curSourceMarker); curSourceMarker = null; }
-                if (type === 'dst' && curDestMarker) { map.removeLayer(curDestMarker); curDestMarker = null; }
+                map.setView([mkLat, mkLon], 13);
             }
+            updateHint();
+        }
+
+        function swapEndpoints() {
+            const btn = document.getElementById('btn-swap');
+            btn.style.transform = btn.style.transform === 'translateY(-50%) rotate(180deg)' ? 'translateY(-50%) rotate(0deg)' : 'translateY(-50%) rotate(180deg)';
+            
+            const fields = ['lat', 'lon', 'landmark'];
+            fields.forEach(f => {
+                const t1 = document.getElementById(`src-${f}`).value;
+                document.getElementById(`src-${f}`).value = document.getElementById(`dst-${f}`).value;
+                document.getElementById(`dst-${f}`).value = t1;
+            });
+            fillCoords('src'); fillCoords('dst');
         }
 
         function resetForm() {
@@ -465,43 +572,22 @@
             document.getElementById('src-lon').value = "";
             document.getElementById('dst-lat').value = "";
             document.getElementById('dst-lon').value = "";
-            document.getElementById('src-custom-opt').style.display = 'none';
-            document.getElementById('dst-custom-opt').style.display = 'none';
-            document.getElementById('src-custom-opt').textContent = 'Custom Map Selection';
-            document.getElementById('dst-custom-opt').textContent = 'Custom Map Selection';
-            document.getElementById('results-section').style.display = 'none';
-            document.getElementById('selected-route-details').style.display = 'none';
+            document.getElementById('src-chip').style.display = 'none';
+            document.getElementById('dst-chip').style.display = 'none';
+            document.getElementById('results-wrapper').style.display = 'none';
+            document.getElementById('smart-dep').style.display = 'none';
+            isComparing = false; document.getElementById('comp-view').style.display = 'none';
+            
             setNow();
-
             if(curSourceMarker) { map.removeLayer(curSourceMarker); curSourceMarker = null; }
             if(curDestMarker) { map.removeLayer(curDestMarker); curDestMarker = null; }
             mapLayers.forEach(l => map.removeLayer(l));
             mapLayers = [];
             map.setView([12.9716, 77.5946], 12);
+            updateHint();
         }
 
-        // Engine Polling
-        let engineReady = false;
-        async function checkHealth() {
-            try {
-                const res = await fetch('/health');
-                const data = await res.json();
-                if (data.engine_ready) {
-                    engineReady = true;
-                    document.getElementById('engine-dot').classList.add('ready');
-                    document.getElementById('engine-text').textContent = 'Engine ready';
-                    document.getElementById('init-banner').style.display = 'none';
-                } else {
-                    document.getElementById('init-banner').style.display = 'block';
-                    setTimeout(checkHealth, 3000);
-                }
-            } catch (err) {
-                setTimeout(checkHealth, 3000);
-            }
-        }
-        checkHealth();
-
-        // Predict ETA logic
+        // Prediction
         async function predictETA() {
             const slat = parseFloat(document.getElementById('src-lat').value);
             const slon = parseFloat(document.getElementById('src-lon').value);
@@ -509,237 +595,285 @@
             const dlon = parseFloat(document.getElementById('dst-lon').value);
             const depTime = document.getElementById('dep-time').value;
 
-            if(!slat || !slon || !dlat || !dlon) {
-                alert("Please select both Source and Destination (via dropdown or map click).");
-                return;
-            }
+            if(!slat || !slon || !dlat || !dlon) { alert("Please set Source and Destination"); return; }
 
             const btn = document.getElementById('predict-btn');
-            const txt = document.getElementById('btn-text');
-            const spin = document.getElementById('btn-spinner');
-            
             btn.disabled = true;
-            txt.textContent = "Computing routes...";
-            spin.style.display = "block";
-            document.getElementById('results-section').style.display = 'none';
-            document.getElementById('selected-route-details').style.display = 'none';
+            document.getElementById('btn-text').textContent = "Computing Journey...";
+            document.getElementById('btn-spinner').style.display = "block";
+            document.getElementById('results-wrapper').style.display = 'none';
+            document.getElementById('smart-dep').style.display = 'none';
+            document.getElementById('skeletons').style.display = 'block';
 
-            // Clear old lines
             mapLayers.forEach(l => map.removeLayer(l));
             mapLayers = [];
 
             try {
-                let bodyData = {
-                    source: {lat: slat, lon: slon},
-                    destination: {lat: dlat, lon: dlon}
-                };
-                if(depTime) {
-                    bodyData.departure_time = new Date(depTime).toISOString();
-                }
-
                 const res = await fetch('/predict-route-eta', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(bodyData)
+                    body: JSON.stringify({
+                        source: {lat: slat, lon: slon},
+                        destination: {lat: dlat, lon: dlon},
+                        departure_time: depTime ? new Date(depTime).toISOString() : undefined
+                    })
                 });
                 
                 const data = await res.json();
-                if(!res.ok) throw new Error(data.detail?.error || data.detail || 'Prediction failed');
+                if(!res.ok) throw new Error(data.detail?.error || data.detail || 'Failed');
 
                 allRoutesData = data.routes || [];
                 if(allRoutesData.length === 0) throw new Error("No routes found.");
 
-                // Render Map UI with darker, narrower lines
-                drawMapRoutes(slat, slon, dlat, dlon, allRoutesData);
-                renderRouteSelector();
-                selectRoute(allRoutesData[0].route_id);
+                drawMap(allRoutesData);
+                renderTabs();
+                renderCompareTable();
+                selectRoute(0);
+                
+                // Smart Dep Strip
+                document.getElementById('smart-dep').style.display = 'flex';
+                document.getElementById('sd-0').textContent = Math.round(allRoutesData[0].eta_minutes['1_hour'].estimate) + 'm';
+                document.getElementById('sd-1').textContent = Math.round(allRoutesData[0].eta_minutes['1_hour'].estimate * 1.05) + 'm';
+                document.getElementById('sd-4').textContent = Math.round(allRoutesData[0].eta_minutes['4_hour'].estimate) + 'm';
+
+                document.getElementById('skeletons').style.display = 'none';
+                document.getElementById('results-wrapper').style.display = 'block';
 
             } catch (err) {
                 alert(`Error: ${err.message}`);
+                document.getElementById('skeletons').style.display = 'none';
             } finally {
                 btn.disabled = false;
-                txt.textContent = "Predict ETA";
-                spin.style.display = "none";
+                document.getElementById('btn-text').textContent = "Compute Journey";
+                document.getElementById('btn-spinner').style.display = "none";
             }
         }
 
-        // Contrast Colors: Blue (Fastest), Black (Alternate), Purple (Scenic)
-        const fallbackColors = ['#2563EB', '#000000', '#9333EA'];
+        // Smart Departure Chip Click
+        function activateChip(el, hrs) {
+            document.querySelectorAll('.sd-chip').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+            let d = new Date();
+            d.setHours(d.getHours() + hrs);
+            d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+            document.getElementById('dep-time').value = d.toISOString().slice(0,16);
+            if(hrs !== 0) predictETA();
+        }
 
-        function drawMapRoutes(slat, slon, dlat, dlon, routes) {
-            // Ensure markers stay up
-            if(!curSourceMarker) {
-                curSourceMarker = L.circleMarker([slat, slon], { radius: 8, fillColor: '#2563EB', color: 'white', weight: 2, fillOpacity: 1, zIndexOffset: 1000 }).addTo(map).bindPopup("Start");
-            }
-            if(!curDestMarker) {
-                curDestMarker = L.circleMarker([dlat, dlon], { radius: 8, fillColor: '#10B981', color: 'white', weight: 2, fillOpacity: 1, zIndexOffset: 1000 }).addTo(map).bindPopup("End");
-            }
+        function drawMap(routes) {
+            const allP = [];
+            routes.forEach((r, i) => {
+                const col = routeColors[i] || '#0F172A';
+                r.renderCol = col;
+                const pts = r.meta.route_geometry.map(p => [p.lat, p.lon]);
+                pts.forEach(p => allP.push(p));
 
-            const allPoints = [];
-            
-            // Render lines
-            routes.forEach((route, idx) => {
-                const rColor = fallbackColors[idx] || route.color || '#6B7280';
-                route.renderColor = rColor; // Save for UI
-
-                const points = route.meta.route_geometry.map(p => [p.lat, p.lon]);
-                points.forEach(p => allPoints.push(p));
-
-                const incText = route.meta.incident ? `<span style="color:#DC2626;font-weight:600">⚠ ${route.meta.incident_segments} incident zones</span>` : `<span style="color:#059669;font-weight:600">✓ Clear route</span>`;
+                // Glow layer
+                const glow = L.polyline(pts, {color: col, weight: 14, opacity: 0.2, lineCap: 'round'}).addTo(map);
+                // Main line
+                const line = L.polyline(pts, {color: col, weight: 4, opacity: 0.9, lineCap: 'round'}).addTo(map);
                 
-                const popupHTML = `
-                    <div class="route-popup">
-                        <div class="route-popup-title" style="color: ${rColor}">${route.label}</div>
-                        <div class="route-popup-eta">${Math.round(route.eta_minutes['1_hour'].estimate)} <span style="font-size:14px;font-weight:400">min</span></div>
-                        <div class="route-popup-sub">${route.meta.distance_km} km &middot; ${incText}</div>
-                    </div>
-                `;
-
-                // Main route line (Narrower, high opacity, darker color)
-                const line = L.polyline(points, {
-                    color: rColor, weight: 4, opacity: 0.9, lineCap: 'round'
-                }).addTo(map);
-
-                line.bindPopup(popupHTML);
-                line.on('click', () => { selectRoute(route.route_id); line.openPopup(); });
-                mapLayers.push(line);
-
-                route._leafletLine = line;
+                const incHtml = r.meta.incident ? `<span style="color:#DC2626;font-weight:700">⚠ ${r.meta.incident_segments} incidents</span>` : `<span style="color:#059669;font-weight:700">✓ Clear</span>`;
+                const pop = `<div class="r-popup"><div class="rp-title" style="color:${col}">${r.label}</div><div class="rp-eta">${Math.round(r.eta_minutes['1_hour'].estimate)} <span>min</span></div><div class="rp-sub"><span>${r.meta.distance_km} km</span> ${incHtml}</div></div>`;
+                line.bindPopup(pop);
+                line.on('click', () => { selectRoute(i); line.openPopup(); });
+                
+                mapLayers.push(glow); mapLayers.push(line);
+                r._lGlow = glow; r._lLine = line;
             });
-
-            if(allPoints.length > 0) {
-                map.fitBounds(L.latLngBounds(allPoints), { padding: [40, 40] });
-            }
+            if(allP.length > 0) map.fitBounds(L.latLngBounds(allP), { padding: [40, 40] });
         }
 
-        function renderRouteSelector() {
+        function renderTabs() {
             const cont = document.getElementById('route-tabs');
-            let html = '';
-            
-            allRoutesData.forEach(route => {
-                const rColor = route.renderColor;
-                const incHtml = route.meta.incident 
-                    ? `<span class="rt-inc"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> ${route.meta.incident_segments}</span>` 
-                    : '';
-
-                html += `
-                    <div class="route-tab" id="tab-${route.route_id}" onclick="selectRoute(${route.route_id})">
-                        <div class="rt-left">
-                            <div class="rt-color" style="background-color: ${rColor}"></div>
-                            <div>
-                                <div class="rt-title">${route.label}</div>
-                                <div class="rt-subtitle">${route.meta.distance_km} km</div>
-                            </div>
+            let ht = '';
+            allRoutesData.forEach((r, i) => {
+                const badge = r.meta.incident ? `<div class="rc-warn"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg> ${r.meta.incident_segments} zones</div>` : `<div class="rc-clear"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Clear</div>`;
+                
+                ht += `
+                    <div class="route-card" id="rtab-${i}" onclick="selectRoute(${i})">
+                        <div class="rc-color-bar" style="background:${r.renderCol}"></div>
+                        <div class="rc-mid">
+                            <div class="rc-title">${r.label}</div>
+                            <div class="rc-sub">${r.meta.distance_km} km</div>
                         </div>
-                        <div class="rt-right">
-                            <div class="rt-time">${Math.round(route.eta_minutes['1_hour'].estimate)}<span style="font-size:12px;font-weight:500;margin-left:2px">m</span></div>
-                            ${incHtml}
+                        <div class="rc-right">
+                            <div style="font-size:18px; font-weight:800; color:var(--text-primary); line-height:1; margin-bottom:4px;">${Math.round(r.eta_minutes['1_hour'].estimate)}<span style="font-size:12px;font-weight:600;margin-left:2px">m</span></div>
+                            ${badge}
                         </div>
                     </div>
                 `;
             });
-            cont.innerHTML = html;
-            document.getElementById('results-section').style.display = 'block';
+            cont.innerHTML = ht;
         }
 
-        function selectRoute(id) {
-            allRoutesData.forEach(r => {
-                const t = document.getElementById(`tab-${r.route_id}`);
-                if(t) {
-                    if(r.route_id === id) t.classList.add('active');
-                    else t.classList.remove('active');
-                }
-                
-                // Emphasize the selected route on the map
-                if(r._leafletLine) {
-                    if(r.route_id === id) {
-                        r._leafletLine.setStyle({ weight: 6, opacity: 1.0 });
-                        r._leafletLine.bringToFront();
-                    } else {
-                        r._leafletLine.setStyle({ weight: 4, opacity: 0.4 });
-                    }
-                }
-            });
-
-            if(curSourceMarker) curSourceMarker.bringToFront();
-            if(curDestMarker) curDestMarker.bringToFront();
-
-            const route = allRoutesData.find(r => r.route_id === id);
-            if(route) {
-                renderDetailsPanel(route);
+        function toggleCompare() {
+            isComparing = !isComparing;
+            const btn = document.getElementById('btn-comp');
+            if(isComparing) {
+                btn.style.color = 'var(--primary)';
+                btn.style.borderColor = 'var(--primary)';
+                document.getElementById('comp-view').style.display = 'block';
+                document.getElementById('selected-route-details').style.display = 'none';
+            } else {
+                btn.style.color = '';
+                btn.style.borderColor = '';
+                document.getElementById('comp-view').style.display = 'none';
+                document.getElementById('selected-route-details').style.display = 'block';
             }
         }
 
-        // More useful confidence parsing
-        function getConfColor(conf) {
-            if(conf >= 0.85) return 'style="background:#dcfce7; color:#15803d"';
-            if(conf >= 0.70) return 'style="background:#fef9c3; color:#a16207"';
-            return 'style="background:#fee2e2; color:#b91c1c"';
-        }
-        function getConfText(conf) {
-            const pct = Math.round(conf * 100);
-            if(conf >= 0.85) return `High Certainty (${pct}%)`;
-            if(conf >= 0.70) return `Medium Certainty (${pct}%)`;
-            return `Low Certainty (${pct}%)`;
-        }
-
-        function renderDetailsPanel(route) {
-            const hCont = document.getElementById('horizons-container');
-            const iCont = document.getElementById('route-info-container');
-            const etas = route.eta_minutes;
-            const confs = route.confidence;
+        function renderCompareTable() {
+            let ht = `<tr><th>Metric</th>`;
+            allRoutesData.forEach(r => ht += `<th>${r.label}</th>`);
+            ht += `</tr>`;
             
-            hCont.innerHTML = `
-                <div class="horizon-card v-1h">
-                    <div class="card-top">
-                        <span class="horizon-label" style="color:#2563EB">1 Hour Horizon</span>
-                        <span class="conf-badge" ${getConfColor(confs['1_hour'])}>${getConfText(confs['1_hour'])}</span>
-                    </div>
-                    <div class="eta-val">${etas['1_hour'].estimate} min</div>
-                    <div class="eta-range">Range: ${etas['1_hour'].lower_bound} – ${etas['1_hour'].upper_bound} min</div>
-                </div>
-                <div class="horizon-card v-2h">
-                    <div class="card-top">
-                        <span class="horizon-label" style="color:#D97706">2 Hour Horizon</span>
-                        <span class="conf-badge" ${getConfColor(confs['2_hour'])}>${getConfText(confs['2_hour'])}</span>
-                    </div>
-                    <div class="eta-val">${etas['2_hour'].estimate} min</div>
-                    <div class="eta-range">Range: ${etas['2_hour'].lower_bound} – ${etas['2_hour'].upper_bound} min</div>
-                </div>
-                <div class="horizon-card v-4h">
-                    <div class="card-top">
-                        <span class="horizon-label" style="color:#0D9488">4 Hour Horizon</span>
-                        <span class="conf-badge" ${getConfColor(confs['4_hour'])}>${getConfText(confs['4_hour'])}</span>
-                    </div>
-                    <div class="eta-val">${etas['4_hour'].estimate} min</div>
-                    <div class="eta-range">Range: ${etas['4_hour'].lower_bound} – ${etas['4_hour'].upper_bound} min</div>
-                </div>
-            `;
+            const keys = [
+                {label: "1h ETA", k: r => Math.round(r.eta_minutes['1_hour'].estimate)+"m", minId: 0},
+                {label: "2h ETA", k: r => Math.round(r.eta_minutes['2_hour'].estimate)+"m", minId: -1},
+                {label: "4h ETA", k: r => Math.round(r.eta_minutes['4_hour'].estimate)+"m", minId: -1},
+                {label: "Distance", k: r => r.meta.distance_km+"km", minId: -1},
+                {label: "Incidents", k: r => r.meta.incident ? "⚠ "+r.meta.incident_segments : "✓ 0", minId: -1}
+            ];
+            
+            keys[0].minId = allRoutesData.reduce((iMin, x, i, arr) => x.eta_minutes['1_hour'].estimate < arr[iMin].eta_minutes['1_hour'].estimate ? i : iMin, 0);
+            keys[1].minId = allRoutesData.reduce((iMin, x, i, arr) => x.eta_minutes['2_hour'].estimate < arr[iMin].eta_minutes['2_hour'].estimate ? i : iMin, 0);
+            keys[2].minId = allRoutesData.reduce((iMin, x, i, arr) => x.eta_minutes['4_hour'].estimate < arr[iMin].eta_minutes['4_hour'].estimate ? i : iMin, 0);
+            keys[3].minId = allRoutesData.reduce((iMin, x, i, arr) => x.meta.distance_km < arr[iMin].meta.distance_km ? i : iMin, 0);
 
-            const incHTML = route.meta.incident 
-                ? `<div class="incident-box inc-warn">
-                       <div class="inc-title"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Incidents Detected</div>
-                       <div class="inc-desc"><b>${route.meta.incident_segments}</b> affected segments &middot; Expected Delay Severity: <b>${Math.round(route.meta.avg_incident_severity * 100)}%</b></div>
-                   </div>`
-                : `<div class="incident-box inc-clear">
-                       <div class="inc-title"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Clear Route</div>
-                   </div>`;
-
-            iCont.innerHTML = `
-                <div class="info-grid">
-                    <div class="info-item">
-                        <div class="info-title">Distance</div>
-                        <div class="info-val">${route.meta.distance_km} km</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-title">Graph Segments</div>
-                        <div class="info-val">${route.meta.segments}</div>
-                    </div>
-                </div>
-                ${incHTML}
-            `;
-            document.getElementById('selected-route-details').style.display = 'block';
+            keys.forEach(k => {
+                ht += `<tr><td>${k.label}</td>`;
+                allRoutesData.forEach((r, i) => {
+                    const cl = i === k.minId ? 'class="highlight-cell"' : '';
+                    ht += `<td ${cl}>${k.k(r)}</td>`;
+                });
+                ht += `</tr>`;
+            });
+            document.getElementById('comp-table').innerHTML = ht;
         }
+
+        // Animated Counters
+        function animateValue(el, target, duration) {
+            let start = 0;
+            const stepTime = 20;
+            const steps = duration / stepTime;
+            const inc = target / steps;
+            const timer = setInterval(() => {
+                start += inc;
+                if(start >= target) { clearInterval(timer); start = target; el.innerHTML = Math.round(target) + " <span>min</span>"; }
+                else el.innerHTML = Math.round(start) + " <span>min</span>";
+            }, stepTime);
+        }
+
+        function getConfObj(conf) {
+            const p = Math.round(conf * 100);
+            if(conf >= 0.85) return { c: 'conf-high', t: `High Certainty · ${p}%`, i: '✓' };
+            if(conf >= 0.70) return { c: 'conf-med', t: `Medium Certainty · ${p}%`, i: '≈' };
+            return { c: 'conf-low', t: `Low Certainty · ${p}%`, i: '↓' };
+        }
+
+        function selectRoute(idx) {
+            if(isComparing) toggleCompare(); // Auto exit compare mode
+
+            allRoutesData.forEach((r, i) => {
+                const t = document.getElementById(`rtab-${i}`);
+                if(t) t.className = i === idx ? 'route-card active' : 'route-card';
+                if(r._lLine) {
+                    if(i === idx) { r._lLine.setStyle({weight:5, opacity:1.0}); r._lGlow.setStyle({opacity:0.3}); r._lLine.bringToFront(); }
+                    else { r._lLine.setStyle({weight:3, opacity:0.4}); r._lGlow.setStyle({opacity:0}); }
+                }
+            });
+            if(curSourceMarker) curSourceMarker.setZIndexOffset(1000);
+            if(curDestMarker) curDestMarker.setZIndexOffset(1000);
+
+            const r = allRoutesData[idx];
+            activeRouteState = r;
+
+            // Horizons
+            const hzCont = document.getElementById('horizons-container');
+            const hzs = [
+                {id: 1, c: 'hz-1', t: '1 Hour Horizon', d: r.eta_minutes['1_hour'], cf: r.confidence['1_hour']},
+                {id: 2, c: 'hz-2', t: '2 Hour Horizon', d: r.eta_minutes['2_hour'], cf: r.confidence['2_hour']},
+                {id: 4, c: 'hz-4', t: '4 Hour Horizon', d: r.eta_minutes['4_hour'], cf: r.confidence['4_hour']}
+            ];
+            
+            let hHt = '';
+            hzs.forEach((h, x) => {
+                const co = getConfObj(h.cf);
+                const w = Math.min(100, Math.max(0, ((h.d.estimate - h.d.lower_bound) / (h.d.upper_bound - h.d.lower_bound)) * 100));
+                
+                hHt += `
+                <div class="hz-card ${h.c} anim-fadeUp anim-delay-${x+1}">
+                    <div class="hz-top">
+                        <div class="hz-label">${h.t}</div>
+                        <div class="hz-conf ${co.c}">${co.i} ${co.t}</div>
+                    </div>
+                    <div class="hz-val" id="val-hz-${h.id}">0 <span>min</span></div>
+                    <div class="hz-range-bar"><div class="hz-range-fill" style="width:${w}%"></div><div class="hz-range-dot" style="left:${w}%"></div></div>
+                    <div class="hz-bounds">${Math.round(h.d.lower_bound)} &ndash; ${Math.round(h.d.upper_bound)} min deviation range</div>
+                </div>`;
+            });
+            hzCont.innerHTML = hHt;
+            
+            // Trigger animation
+            setTimeout(() => {
+                hzs.forEach(h => animateValue(document.getElementById(`val-hz-${h.id}`), h.d.estimate, 600));
+            }, 50);
+
+            // Meta
+            document.getElementById('meta-grid').innerHTML = `
+                <div class="meta-box"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg><div class="meta-box-val">${r.meta.distance_km} km</div><div class="meta-box-lbl">Distance</div></div>
+                <div class="meta-box"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><div class="meta-box-val">${r.meta.segments}</div><div class="meta-box-lbl">Graph Edges</div></div>
+            `;
+
+            // Incident — hover triggers map markers
+            const incCoords = r.meta.incident_coordinates || [];
+            const incHTML = r.meta.incident 
+                ? `<div class="inc-box ib-warn" id="inc-hover-zone"
+                       title="Hover to see incident locations on map">
+                    <svg class="ib-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    <div style="flex:1">
+                        <div class="ib-title">Traffic Events Detected <span style="font-size:11px;font-weight:500;color:#9A3412;margin-left:6px;">↖ hover to view on map</span></div>
+                        <div class="ib-desc">${r.meta.incident_segments} impacted segments requiring contextual modulation.</div>
+                        <div class="sev-bar"><div class="sev-fill" style="width:${Math.min(100, r.meta.avg_incident_severity * 100)}%"></div></div>
+                    </div>
+                   </div>`
+                : `<div class="inc-box ib-clear">
+                    <svg class="ib-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    <div>
+                        <div class="ib-title">Clear Route</div>
+                        <div class="ib-desc">No substantial graph frictions or incidents detected across geometry.</div>
+                    </div>
+                   </div>`;
+            document.getElementById('inc-container').innerHTML = incHTML;
+
+            // Wire up hover listeners if there are incidents
+            if(r.meta.incident && incCoords.length > 0) {
+                const hz = document.getElementById('inc-hover-zone');
+                if(hz) {
+                    hz.addEventListener('mouseenter', () => showIncidentMarkers(incCoords));
+                    hz.addEventListener('mouseleave', hideIncidentMarkers);
+                }
+            }
+        }
+
+        // Share Feature
+        let activeRouteState = null;
+        function shareRoute() {
+            if(!activeRouteState) return;
+            const r = activeRouteState;
+            const srcNm = document.getElementById('src-landmark').value.split(',').length === 2 && !document.getElementById('src-chip').textContent ? document.getElementById('src-landmark').options[document.getElementById('src-landmark').selectedIndex].text : (document.getElementById('src-chip').textContent || "Source");
+            const dstNm = document.getElementById('dst-landmark').value.split(',').length === 2 && !document.getElementById('dst-chip').textContent ? document.getElementById('dst-landmark').options[document.getElementById('dst-landmark').selectedIndex].text : (document.getElementById('dst-chip').textContent || "Destination");
+            
+            const text = `CGEE Route Prediction\nFrom: ${srcNm} → To: ${dstNm}\nFastest Route: ${Math.round(r.eta_minutes['1_hour'].estimate)} min (1h horizon, High Certainty)\nDistance: ${r.meta.distance_km} km | ${r.meta.incident ? r.meta.incident_segments : 0} incident segments\nPredicted via Contextual Graph ETA Engine`;
+            
+            navigator.clipboard.writeText(text);
+            const t = document.getElementById('toast');
+            t.style.display = 'flex';
+            setTimeout(()=> t.classList.add('show'), 10);
+            setTimeout(()=> { t.classList.remove('show'); setTimeout(()=>t.style.display='none', 300); }, 3000);
+        }
+
     </script>
 </body>
 </html>

@@ -1,31 +1,108 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@layer utilities {
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
+@layer base {
+  :root {
+    --primary: #1A56DB;
+    --primary-light: #EBF2FF;
+    --primary-dark: #1039A0;
+    --accent: #0EA5E9;
+    --success: #059669;
+    --warning: #D97706;
+    --danger: #DC2626;
+    --text-primary: #0F172A;
+    --text-secondary: #475569;
+    --text-muted: #94A3B8;
+    --bg-base: #FFFFFF;
+    --bg-surface: #F8FAFC;
+    --bg-elevated: #F1F5F9;
+    --border: #E2E8F0;
+    --border-focus: #1A56DB;
+    --shadow-sm: 0 1px 3px rgba(15,23,42,0.08);
+    --shadow-md: 0 4px 16px rgba(15,23,42,0.10);
+    --shadow-lg: 0 8px 32px rgba(15,23,42,0.12);
   }
-  
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: rgba(15, 23, 42, 0.5); 
-  }
-  
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(51, 65, 85, 0.8); 
-    border-radius: 10px;
-  }
-  
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(71, 85, 105, 1); 
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', sans-serif;
+    color: var(--text-secondary);
+    background-color: var(--bg-base);
+    height: 100vh;
+    @apply antialiased overflow-hidden;
   }
 }
 
-/* Fix for Leaflet filters so they render properly in dark mode context */
-.leaflet-container {
-  background: #0f172a !important;
-  font-family: inherit;
+@layer utilities {
+  .btn-base {
+    @apply inline-flex items-center justify-center font-semibold rounded-[8px] transition-all duration-200 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed;
+  }
+  
+  .input-base {
+    @apply w-full px-3 py-[12px] bg-[var(--bg-surface)] border border-[var(--border)] rounded-[8px] font-medium text-[14px] text-[var(--text-primary)] outline-none transition-all duration-200 focus:bg-white focus:border-[var(--border-focus)] focus:ring-[3px] focus:ring-[var(--primary-light)];
+  }
+
+  .card-base {
+    @apply bg-white border border-[var(--border)] rounded-[12px] shadow-[var(--shadow-sm)];
+  }
 }
-.map-tiles {
-  filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  @keyframes shimmer {
+    0% { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
+  }
+  @keyframes pulseRings {
+    0% { transform: scale(0.8); opacity: 1; }
+    100% { transform: scale(1.6); opacity: 0; }
+  }
+  @keyframes routeGlow {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1.0; }
+  }
+
+  .anim-fadeUp { animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
+  .anim-slideInLeft { animation: slideInLeft 0.5s ease forwards; }
+  .anim-scaleIn { animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  .anim-shimmer { background-size: 400px 100%; animation: shimmer 1.5s infinite; }
+  
+  .delay-50 { animation-delay: 50ms; }
+  .delay-100 { animation-delay: 100ms; }
+  .delay-150 { animation-delay: 150ms; }
+}
+
+/* Custom Marker Leaflet classes */
+.custom-src-marker, .custom-dst-marker {
+  @apply rounded-full flex items-center justify-center relative;
+}
+
+.custom-src-marker::after, .custom-dst-marker::after {
+  content: '';
+  position: absolute; width: 100%; height: 100%; border-radius: 50%;
+  background: inherit;
+  animation: pulseRings 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+  z-index: -1;
+}
+
+.marker-inner-dot {
+  width: 40%; height: 40%; background: white; border-radius: 50%;
 }

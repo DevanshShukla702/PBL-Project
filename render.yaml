@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: cgee-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: DEMO_EMAIL
+        value: demo@cgee.ai
+      - key: DEMO_PASSWORD
+        sync: false
+    disk:
+      name: cgee-data
+      mountPath: /app/data
+      sizeGB: 3
+    healthCheckPath: /health

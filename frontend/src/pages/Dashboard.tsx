@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import LocationSearch from '../components/LocationSearch';
 import DateTimeSelector from '../components/DateTimeSelector';
 import ResultsPanel from '../components/ResultsPanel';
@@ -6,7 +6,11 @@ import MapView from '../components/MapView';
 import { predictRouteETA, RouteResponse } from '../services/api';
 import { Coordinate } from '../types';
 
-export default function Dashboard() {
+interface DashboardProps {
+  pendingTrip?: { source: Coordinate, dest: Coordinate, autoPredict?: boolean } | null;
+}
+
+export default function Dashboard({ pendingTrip }: DashboardProps) {
   const [source, setSource] = useState<Coordinate | null>(null);
   const [dest, setDest] = useState<Coordinate | null>(null);
   const [depTime, setDepTime] = useState<Date>(new Date());
@@ -16,12 +20,25 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handlePredict = async () => {
-    if(!source || !dest) return;
+  useEffect(() => {
+    if (pendingTrip) {
+      setSource(pendingTrip.source);
+      setDest(pendingTrip.dest);
+      if (pendingTrip.autoPredict) {
+        setTimeout(() => handlePredict(pendingTrip.source, pendingTrip.dest), 300);
+      }
+    }
+  }, [pendingTrip]);
+
+  const handlePredict = async (
+    overrideSource: Coordinate | null = source, 
+    overrideDest: Coordinate | null = dest
+  ) => {
+    if(!overrideSource || !overrideDest) return;
     setIsLoading(true); setError(null);
     try {
       const data = await predictRouteETA({
-        source, destination: dest, departure_time: depTime.toISOString()
+        source: overrideSource, destination: overrideDest, departure_time: depTime.toISOString()
       });
       if(data.routes && data.routes.length > 0) {
         setRoutes(data.routes);
@@ -72,7 +89,7 @@ export default function Dashboard() {
           <button 
             className="w-full h-[52px] bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-white font-bold rounded-lg flex items-center justify-center gap-2 mt-2 shadow-[0_4px_20px_rgba(26,86,219,0.3)] hover:-translate-y-0.5 hover:shadow-[0_6px_24px_rgba(26,86,219,0.4)] transition-all disabled:opacity-70 disabled:hover:translate-y-0"
             disabled={!source || !dest || isLoading}
-            onClick={handlePredict}
+            onClick={() => handlePredict()}
           >
             {isLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : 'Compute Intelligence'}
           </button>

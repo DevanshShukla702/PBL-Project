@@ -16,6 +16,11 @@ from src.routing.route_eta import (
     compute_route_eta,
     get_shortest_path,
 )
+from src.db.supabase_client import save_trip, get_history, get_favourites, delete_favourite
+import threading
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 logging.basicConfig(
     level=logging.INFO,
@@ -56,13 +61,21 @@ app = FastAPI(
 )
 
 # CORS — allow React dev server (Vite on :5173) and any other origin
+ALLOWED_ORIGINS = os.environ.get(
+    "ALLOWED_ORIGINS",
+    "http://localhost:5173,http://localhost:8000"
+).split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "DELETE"],
+    allow_headers=["Content-Type", "X-Session-ID"],
 )
+
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 # ----- Pydantic models with Bengaluru bounding box validation -----
@@ -91,6 +104,13 @@ class Location(BaseModel):
 class RouteRequest(BaseModel):
     source: Location
     destination: Location
+
+class SessionRequest(BaseModel):
+    session_id: str
+
+class DeleteFavRequest(BaseModel):
+    session_id: str
+    fav_id: str
 
 
 # ----- Middleware: structured request logging -----
@@ -140,20 +160,10 @@ async def value_error_handler(request: Request, exc: ValueError):
 @app.get("/health")
 def health():
     import src.routing.route_eta as eng
-
-    graph_info = {}
-    if eng.GRAPH is not None:
-        graph_info = {
-            "nodes": len(eng.GRAPH.nodes),
-            "edges": len(eng.GRAPH.edges),
-        }
     return {
         "status": "ok" if is_engine_ready() else "initializing",
         "engine_ready": is_engine_ready(),
-        "init_error": get_init_error(),
-        "graph": graph_info,
-        "models": list(eng.MODELS.keys()) if eng.MODELS else [],
-        "route_cache": get_shortest_path.cache_info()._asdict(),
+        "models": list(eng.MODELS.keys()) if hasattr(eng, 'MODELS') and eng.MODELS else [],
     }
 
 
@@ -164,7 +174,8 @@ def clear_cache():
 
 
 @app.post("/predict-route-eta")
-def predict_route_eta(req: RouteRequest):
+@limiter.limit("30/minute")
+def predict_route_eta(request: Request, req: RouteRequest):
     if not is_engine_ready():
         err = get_init_error()
         raise HTTPException(
@@ -179,10 +190,17 @@ def predict_route_eta(req: RouteRequest):
             },
         )
     try:
-        return compute_route_eta(
+        result = compute_route_eta(
             source=req.source.dict(),
             destination=req.destination.dict(),
         )
+        session_id = request.headers.get("X-Session-ID", "demo")
+        threading.Thread(
+            target=save_trip,
+            args=(session_id, req.source.dict(), req.destination.dict(), result),
+            daemon=True
+        ).start()
+        return result
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except ValueError as e:
@@ -193,6 +211,33 @@ def predict_route_eta(req: RouteRequest):
             status_code=500,
             detail={"error": "ETA computation failed", "detail": str(e)},
         )
+
+@app.post("/trips/save")
+def save_trip_endpoint(req: RouteRequest, session_id: str = "demo"):
+    """Called by frontend after a successful prediction to store history."""
+    return {"saved": True}
+
+@app.get("/trips/history")
+@limiter.limit("60/minute")
+def trip_history(request: Request, session_id: str = "demo"):
+    return {"trips": get_history(session_id)}
+
+@app.get("/trips/favourites")
+@limiter.limit("60/minute")
+def trip_favourites(request: Request, session_id: str = "demo"):
+    return {"favourites": get_favourites(session_id)}
+
+@app.delete("/trips/favourites/{fav_id}")
+def remove_favourite(fav_id: str, session_id: str = "demo"):
+    delete_favourite(session_id, fav_id)
+    return {"deleted": True}
+
+@app.get("/config/auth-hint")
+def auth_hint():
+    return {
+        "email": os.environ.get("DEMO_EMAIL", "demo@cgee.ai"),
+        "hint":  "Use credentials set by administrator"
+    }
 
 
 # Mount AFTER all routes. Create the directory if it doesn't exist.

@@ -28,10 +28,8 @@ RUN cd frontend && npm ci && npm run build
 # Expose FastAPI Port
 EXPOSE 8000
 
+RUN mkdir -p /app/data/raw/osm /app/models && echo "Data directories ready"
+
 # Single worker — OSMnx graph lives in process memory.
 # Multi-worker would duplicate ~1-2GB per worker without shared state.
-CMD ["uvicorn", "src.api.main:app", \
-     "--host", "0.0.0.0", \
-     "--port", "8000", \
-     "--workers", "1", \
-     "--log-level", "info"]
+CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--log-level", "info", "--timeout-keep-alive", "120"]

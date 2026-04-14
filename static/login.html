@@ -227,10 +227,10 @@
             </button>
         </form>
 
-        <div class="demo-box">
+        <div class="demo-box" id="demo-box">
             <p>Demo Credentials</p>
-            <div class="demo-cred">Email: <span>demo@cgee.ai</span></div>
-            <div class="demo-cred">Password: <span>demo123</span></div>
+            <div class="demo-cred">Email: <span id="demo-email-display">demo@cgee.ai</span></div>
+            <div class="demo-cred">Hint: <span id="demo-hint-display">Use demo123 (or admin pass)</span></div>
         </div>
 
         <div class="error-msg" id="error-msg">Invalid credentials. Use the demo credentials above.</div>
@@ -264,7 +264,10 @@
             // Simulate auth delay for UX polish
             await new Promise(r => setTimeout(r, 800));
 
-            if(email === 'demo@cgee.ai' && password === 'demo123') {
+            const VALID_EMAIL = window.CGEE_AUTH_EMAIL || 'demo@cgee.ai';
+            const VALID_PASS  = window.CGEE_AUTH_PASS  || 'demo123';
+
+            if(email === VALID_EMAIL && password === VALID_PASS) {
                 localStorage.setItem('cgee_auth', '1');
                 localStorage.setItem('cgee_user', 'Demo User');
                 window.location.href = '/static/index.html';
@@ -280,6 +283,14 @@
         if(localStorage.getItem('cgee_auth')) {
             window.location.href = '/static/index.html';
         }
+
+        // Fetch dynamic auth hints, avoiding exposing password over API directly
+        fetch('/config/auth-hint').then(res => res.json()).then(data => {
+            window.CGEE_AUTH_EMAIL = data.email;
+            document.getElementById('demo-email-display').textContent = data.email || 'demo@cgee.ai';
+            document.getElementById('demo-hint-display').textContent = data.hint || 'Check with administrator';
+            document.getElementById('email').placeholder = data.email || 'demo@cgee.ai';
+        }).catch(err => console.error("Failed to fetch auth hint", err));
     </script>
 </body>
 </html>

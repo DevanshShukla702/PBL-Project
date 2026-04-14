@@ -1,4 +1,5 @@
 export interface Coordinate { lat: number; lon: number; label?: string; }
+import { getSessionId } from './historyApi';
 
 export interface RouteResponse {
   route_id: number;
@@ -28,7 +29,7 @@ export const checkHealth = async () => {
 export const predictRouteETA = async (data: any) => {
   const res = await fetch('/predict-route-eta', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-Session-ID': getSessionId() },
     body: JSON.stringify(data)
   });
   if (!res.ok) {
